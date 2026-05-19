@@ -1,0 +1,6 @@
+{
+  "name": "Ami's Birthday Invitation",
+  "description": "A beautiful, interactive landing page for Ami's 24th birthday invitation, featuring a surprise photo booth and romantic memories.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
