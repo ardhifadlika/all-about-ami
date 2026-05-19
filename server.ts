@@ -11,9 +11,14 @@ async function startServer() {
   const PORT = 3000;
 
   // Supabase Client (Server-side only)
-  const supabaseUrl = process.env.SUPABASE_URL;
+  let supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
+  // Sanitize URL: Remove any trailing /rest/v1/ or slashes
+  if (supabaseUrl) {
+    supabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/$/, "");
+  }
+
   let supabase: any = null;
   if (supabaseUrl && supabaseKey) {
     supabase = createClient(supabaseUrl, supabaseKey);
@@ -34,30 +39,53 @@ async function startServer() {
         return res.status(400).json({ error: "No image data provided" });
       }
 
+      // Ensure the 'reactions' bucket exists (Service Role key allows this)
+      const bucketName = "reactions";
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some((b: any) => b.name === bucketName);
+
+      if (!bucketExists) {
+        console.log(`Creating bucket: ${bucketName}`);
+        const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          allowedMimeTypes: ['image/png', 'image/jpeg'],
+        });
+        if (bucketError) {
+          console.error("Error creating bucket:", bucketError);
+          // Continue anyway, as it might just be a permissions issue if it already exists but listBuckets failed
+        }
+      }
+
       // Remove base64 prefix
       const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
       const buffer = Buffer.from(base64Data, "base64");
 
       // Upload to Supabase Storage
-      // Assuming a bucket named 'reactions' exists
+      const filePath = `ami_birthday/${filename || `reaction_${Date.now()}.png`}`;
       const { data, error } = await supabase.storage
-        .from("reactions")
-        .upload(`ami_birthday/${filename || `reaction_${Date.now()}.png`}`, buffer, {
+        .from(bucketName)
+        .upload(filePath, buffer, {
           contentType: "image/png",
           upsert: true,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase Storage Error:", error);
+        throw error;
+      }
 
       // Get Public URL
       const { data: urlData } = supabase.storage
-        .from("reactions")
+        .from(bucketName)
         .getPublicUrl(data.path);
 
       res.json({ success: true, url: urlData.publicUrl });
     } catch (error: any) {
-      console.error("Upload error:", error);
-      res.status(500).json({ error: error.message });
+      console.error("Upload error details:", error);
+      res.status(500).json({ 
+        error: error.message || "Internal server error during upload",
+        details: error
+      });
     }
   });
 
