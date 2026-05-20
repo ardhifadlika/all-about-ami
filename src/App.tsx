@@ -5,6 +5,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import { 
   Heart, 
   Calendar, 
@@ -20,8 +21,31 @@ import {
   Gift,
   Coffee,
   Utensils,
-  Camera as CameraIcon
+  Camera as CameraIcon,
+  Flower
 } from 'lucide-react';
+
+function MusicSlash({ className }: { className?: string }) {
+  return (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="24" 
+      height="24" 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="M9 18V5l12-2v13" className="opacity-50" />
+      <circle cx="6" cy="18" r="3" className="opacity-50" />
+      <circle cx="18" cy="16" r="3" className="opacity-50" />
+      <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="2.5" />
+    </svg>
+  );
+}
 
 export default function App() {
   const pageRef = useRef<HTMLDivElement>(null);
@@ -41,9 +65,21 @@ export default function App() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isMemoryPlaying, setIsMemoryPlaying] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [galleryToast, setGalleryToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (galleryToast) {
+      const timer = setTimeout(() => {
+        setGalleryToast(null);
+      }, 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [galleryToast]);
 
   // Supabase public URL for assets (keeping user's provided ones)
-  const dresscodeImage = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/dresscode/ami%20dc.png';
+  const dresscodeImage = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/dresscode/3D%20ami.png';
   const memoryVideo = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/birthday-assets/videos/memory-video.mp4';
   const imageSectionImage = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/background/Ours%202.png';
 
@@ -62,7 +98,7 @@ export default function App() {
     { id: 'dresscode', label: 'Dresscode' },
     { id: 'schedule', label: "Today's Plan" },
     { id: 'memories', label: 'Memories' },
-    { id: 'image-section', label: 'Our Photo' },
+    { id: 'image-section', label: 'Our Album' },
     { id: 'letter', label: 'A Little Note' },
     { id: 'surprise', label: 'Last Thing' },
   ];
@@ -266,6 +302,35 @@ export default function App() {
     setShowCamera(false);
   };
 
+  const triggerConfetti = () => {
+    // Elegant left burst
+    confetti({
+      particleCount: 140,
+      spread: 85,
+      origin: { x: 0.1, y: 0.6 },
+      colors: ['#ff70ae', '#ffb6d5', '#ffccd5', '#ffffff', '#ffd700'],
+      ticks: 280
+    });
+    // Elegant right burst
+    confetti({
+      particleCount: 140,
+      spread: 85,
+      origin: { x: 0.9, y: 0.6 },
+      colors: ['#ff70ae', '#ffb6d5', '#ffccd5', '#ffffff', '#ffd700'],
+      ticks: 280
+    });
+    // Magical center delay burst
+    setTimeout(() => {
+      confetti({
+        particleCount: 90,
+        spread: 110,
+        origin: { x: 0.5, y: 0.4 },
+        colors: ['#ff70ae', '#ffd700', '#ffffff'],
+        ticks: 200
+      });
+    }, 250);
+  };
+
   const handleUploadToSupabase = async () => {
     if (!capturedPhoto || isUploading) return;
     
@@ -286,6 +351,7 @@ export default function App() {
       
       if (result.success) {
         setUploadStatus('success');
+        triggerConfetti();
       } else {
         throw new Error(result.error || 'Upload failed');
       }
@@ -322,7 +388,7 @@ export default function App() {
     <div
       ref={pageRef}
       onScroll={handlePageScroll}
-      className={`h-screen snap-y snap-mandatory scroll-smooth bg-[#fff5f8] text-[#4A2230] overflow-x-hidden relative selection:bg-[#ff70ae]/30 ${!invitationOpened ? 'overflow-y-hidden' : 'overflow-y-scroll'}`}
+      className={`h-[100dvh] snap-y snap-mandatory scroll-smooth bg-[#fff5f8] text-[#4A2230] overflow-x-hidden relative selection:bg-[#ff70ae]/30 ${!invitationOpened ? 'overflow-y-hidden' : 'overflow-y-scroll'}`}
     >
       {/* Background Parallax Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -375,27 +441,18 @@ export default function App() {
             initial={{ 
               opacity: 0, 
               x: 100, 
-              y: 200, 
-              scaleX: 0.1, 
-              scaleY: 0.5, 
-              rotate: 15,
+              scale: 0.35, 
               transformOrigin: 'right bottom' 
             }}
             animate={{ 
               opacity: 1, 
               x: 0, 
-              y: 0, 
-              scaleX: 1, 
-              scaleY: 1, 
-              rotate: 0 
+              scale: 0.7,
             }}
             exit={{ 
               opacity: 0, 
               x: 100, 
-              y: 200, 
-              scaleX: 0.1, 
-              scaleY: 0.5, 
-              rotate: 15 
+              scale: 0.35 
             }}
             transition={{ 
               type: 'spring', 
@@ -403,26 +460,67 @@ export default function App() {
               stiffness: 120,
               duration: 0.8 
             }}
-            className="fixed right-4 md:right-6 top-1/2 -translate-y-1/2 z-50 hidden lg:flex flex-col gap-3 md:gap-4"
+            className="fixed right-6 md:right-10 top-1/2 -translate-y-1/2 z-50 hidden lg:flex flex-col gap-3 items-end group/sidebar origin-right"
+            onMouseLeave={() => setHoveredIndex(null)}
           >
-            {sectionNav.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => scrollToSection(item.id)}
-                className="group flex items-center justify-end gap-3 outline-none"
-              >
-                <span className={`text-[10px] md:text-xs font-medium uppercase tracking-widest transition-all duration-300 ${activeSection === item.id ? 'text-[#ff70ae] opacity-100 translate-x-0' : 'text-[#ff70ae]/40 opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0'}`}>
-                  {item.label}
-                </span>
-                <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full transition-all duration-300 ${activeSection === item.id ? 'bg-[#ff70ae] scale-150 shadow-[0_0_10px_rgba(255,112,174,0.5)]' : 'bg-[#ff70ae]/20 group-hover:bg-[#ff70ae]/50'}`} />
-              </button>
-            ))}
+            {sectionNav.map((item, index) => {
+              const isActive = activeSection === item.id;
+              
+              // macOS Dock Fisheye scale factor calculation
+              let factor = 1.0;
+              if (hoveredIndex !== null) {
+                const distance = Math.abs(hoveredIndex - index);
+                if (distance === 0) {
+                  factor = 1.25; // Directly hovered scales up significantly!
+                } else if (distance === 1) {
+                  factor = 1.12; // Immediate neighbors scale up beautifully
+                } else if (distance === 2) {
+                  factor = 1.04; // Secondary items scale up slightly
+                }
+              }
+
+              return (
+                <motion.button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  animate={{ 
+                    scale: factor,
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ 
+                    type: 'spring', 
+                    stiffness: 700, 
+                    damping: 22, 
+                    mass: 0.3
+                  }}
+                  className={`w-52 h-10 px-5 rounded-full flex items-center justify-between outline-none cursor-pointer transition-all duration-300 select-none ${
+                    isActive 
+                      ? 'bg-white/85 backdrop-blur-2xl border border-white/60 shadow-lg shadow-[#ff70ae]/10' 
+                      : 'bg-transparent border border-transparent hover:bg-white/35 hover:border-white/20'
+                  }`}
+                >
+                  <span className={`text-sm font-serif font-medium tracking-wide transition-all duration-300 transform-gpu ${
+                    isActive 
+                      ? 'text-[#ff70ae] font-semibold opacity-100' 
+                      : 'text-[#4A2230]/40 group-hover/sidebar:text-[#4A2230]/75 group-hover/sidebar:opacity-100 hover:!text-[#ff70ae] hover:!font-semibold'
+                  }`}>
+                    {item.label}
+                  </span>
+                  <div className={`rounded-full transition-all duration-300 transform-gpu ${
+                    isActive 
+                      ? 'w-3 h-3 bg-[#ff70ae] scale-110 shadow-[0_0_10px_rgba(255,112,174,0.6)]' 
+                      : 'w-1.5 h-1.5 bg-[#ff70ae]/30 group-hover/sidebar:bg-[#ff70ae]/65 hover:!bg-[#ff70ae] hover:!scale-125'
+                  }`} />
+                </motion.button>
+              );
+            })}
           </motion.nav>
         )}
       </AnimatePresence>
 
       {/* HERO SECTION */}
-      <section id="hero" className="relative z-10 h-screen snap-start flex flex-col items-center justify-center px-6 text-center overflow-hidden">
+      <section id="hero" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center px-6 text-center overflow-hidden">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -440,7 +538,7 @@ export default function App() {
           </p>
           <button
             onClick={handleOpenInvitation}
-            className="group relative px-8 py-4 md:px-10 md:py-5 bg-[#ff70ae] text-white rounded-full font-medium transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#ff70ae]/20 overflow-hidden text-sm md:text-base"
+            className="group relative h-12 px-[16px] mx-[16px] my-[12px] inline-flex items-center justify-center bg-[#ff70ae] text-white rounded-full font-medium transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#ff70ae]/20 overflow-hidden text-sm md:text-base"
           >
             <span className="relative z-10 flex items-center gap-2">
               Open Invitation <Heart className="w-4 h-4 fill-current" />
@@ -457,18 +555,89 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-[100] bg-white/40 backdrop-blur-3xl flex items-center justify-center overflow-hidden"
             >
-              <div className="relative">
-                {/* Love Loading Animation */}
-                <motion.div 
-                  animate={{ 
-                    scale: [1, 1.5, 1],
-                    rotate: [0, 10, -10, 0]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-[#ff70ae] relative z-10"
-                >
-                  <Heart size={120} fill="currentColor" />
-                </motion.div>
+              <div className="relative flex flex-col items-center">
+                {/* Heart Bucket with Water Filling Effect */}
+                <div className="relative w-48 h-48 md:w-64 md:h-64">
+                  <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-2xl">
+                    <defs>
+                      <clipPath id="heart-mask">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                      </clipPath>
+                    </defs>
+                    
+                    {/* Background Heart (Empty State) */}
+                    <path 
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
+                      fill="white"
+                      stroke="#ff70ae"
+                      strokeWidth="0.5"
+                      className="opacity-20"
+                    />
+
+                    {/* Water Filling Level */}
+                    <g clipPath="url(#heart-mask)">
+                      <motion.g
+                        animate={{ 
+                          y: [20, 2, 20],
+                        }}
+                        transition={{ 
+                          duration: 4,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        {/* Main Liquid */}
+                        <motion.rect
+                          x="0"
+                          y="4"
+                          width="24"
+                          height="24"
+                          fill="#ff70ae"
+                        />
+                        
+                        {/* Wave Effect Top */}
+                        <motion.path
+                          d="M 0 4 Q 3 1, 6 4 T 12 4 T 18 4 T 24 4 V 6 H 0 Z"
+                          fill="#ff70ae"
+                          animate={{ 
+                            x: [-4, 0, -4],
+                          }}
+                          transition={{ 
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                        
+                        {/* Highlights for "Water" surface */}
+                        <motion.path
+                          d="M 0 5 Q 3 2, 6 5 T 12 5 T 18 5 T 24 5"
+                          stroke="white"
+                          strokeWidth="0.2"
+                          fill="none"
+                          className="opacity-40"
+                          animate={{ 
+                            x: [0, -4, 0],
+                          }}
+                          transition={{ 
+                            duration: 2.5,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      </motion.g>
+                    </g>
+
+                    {/* Heart Glossy Glow overlay */}
+                    <path 
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
+                      fill="none"
+                      stroke="#ff70ae"
+                      strokeWidth="0.8"
+                      className="opacity-40"
+                    />
+                  </svg>
+                </div>
                 
                 {/* Flying Hearts */}
                 {[...Array(12)].map((_, i) => (
@@ -503,61 +672,63 @@ export default function App() {
       </section>
 
       {/* INVITATION SECTION */}
-      <section id="invitation" className="relative z-10 h-screen snap-start flex items-center justify-center px-4 md:px-6">
+      <section id="invitation" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-4 md:px-6">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           whileInView={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md bg-white/60 backdrop-blur-2xl p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-white/40 shadow-2xl space-y-4 md:space-y-8"
+          className="w-full max-w-md bg-white/60 backdrop-blur-2xl p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-white/40 shadow-2xl space-y-4 md:space-y-8 flex flex-col justify-between"
         >
-          <div className="space-y-2">
+          <div className="space-y-3.5 md:space-y-5">
             <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Invitation</span>
-            <h2 className="text-3xl md:text-4xl font-serif">Ami's 24th Birthday</h2>
+            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Ami's 24th Birthday</h2>
           </div>
           
           <div className="space-y-3 md:space-y-4">
-            <div className="flex items-center gap-4 p-3 md:p-4 bg-white/50 rounded-2xl">
+            <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
               <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
                 <Calendar size={20} />
               </div>
-              <p className="font-medium text-base md:text-lg">8 June 2026</p>
+              <p className="font-medium text-sm md:text-base">8 June 2026</p>
             </div>
-            <div className="flex items-center gap-4 p-3 md:p-4 bg-white/50 rounded-2xl">
+            <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
               <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
                 <Clock size={20} />
               </div>
-              <p className="font-medium text-base md:text-lg">13:00</p>
+              <p className="font-medium text-sm md:text-base">13:00</p>
             </div>
-            <div className="flex items-center gap-4 p-3 md:p-4 bg-white/50 rounded-2xl">
+            <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
               <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
                 <MapPin size={20} />
               </div>
-              <p className="font-medium text-sm md:text-base">MAISON TATSUYA Teppanyaki Summarecon Bekasi</p>
+              <p className="font-medium text-xs md:text-sm">MAISON TATSUYA Teppanyaki Summarecon Bekasi</p>
             </div>
           </div>
 
-          <p className="text-sm md:text-base text-[#8A5A68]">I already planned everything for us ❤️</p>
+          <p className="text-sm text-[#8A5A68]">I already planned everything for us ❤️</p>
           
-          <a
-            href="https://maps.app.goo.gl/WXDou4CoJxN9cbbr9"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full flex items-center justify-center gap-2 bg-[#ff70ae] text-white py-3 md:py-4 rounded-2xl font-semibold hover:bg-[#ff5a9e] transition-colors text-sm md:text-base"
-          >
-            View Location <ChevronRight size={18} />
-          </a>
+          <div className="w-full flex justify-center">
+            <a
+              href="https://maps.app.goo.gl/WXDou4CoJxN9cbbr9"
+              target="_blank"
+              rel="noreferrer"
+              className="w-[calc(100%-32px)] h-12 px-[16px] mx-[16px] my-[12px] flex items-center justify-center gap-2 bg-[#ff70ae] text-white rounded-2xl font-semibold hover:bg-[#ff5a9e] transition-colors text-sm md:text-base"
+            >
+              View Location <ChevronRight size={18} />
+            </a>
+          </div>
         </motion.div>
       </section>
 
       {/* DRESSCODE SECTION */}
-      <section id="dresscode" className="relative z-10 h-screen snap-start flex items-center justify-center px-6 overflow-hidden">
+      <section id="dresscode" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-6 overflow-hidden py-4">
         <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            className="space-y-2 md:space-y-6 text-center md:text-left order-2 md:order-1"
+            className="space-y-4 md:space-y-6 text-center md:text-left order-2 md:order-1"
           >
             <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Dresscode</span>
-            <h2 className="text-2xl md:text-5xl font-serif leading-tight">Pink and Jeans 💖</h2>
+            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Pink and Jeans 💖</h2>
             <p className="text-sm md:text-lg text-[#8A5A68] leading-relaxed">
               Let's match! Wear your favorite pink top paired with stylish jeans for our special date.
             </p>
@@ -568,6 +739,59 @@ export default function App() {
             whileInView={{ opacity: 1, scale: 1 }}
             className="relative order-1 md:order-2"
           >
+            {/* Cute Pink Ornaments around the frame */}
+            {/* 1. Flower Top-Left */}
+            <motion.div
+              animate={{ 
+                y: [0, -6, 0],
+                rotate: [0, 8, 0]
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              whileHover={{ scale: 1.15, rotate: 15 }}
+              className="absolute -top-4 -left-4 md:-top-7 md:-left-7 z-20 w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#fff5f8] border-4 md:border-[6px] border-white text-[#ff70ae] shadow-[0_8px_16px_rgba(255,112,174,0.35)] flex items-center justify-center cursor-pointer select-none"
+            >
+              <Flower className="w-6 h-6 md:w-8 md:h-8 stroke-[2.5]" fill="#ff70ae" fillOpacity={0.2} />
+            </motion.div>
+
+            {/* 2. Heart Top-Right */}
+            <motion.div
+              animate={{ 
+                scale: [1, 1.06, 1],
+                y: [0, -3, 0]
+              }}
+              transition={{
+                duration: 2.8,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              whileHover={{ scale: 1.2 }}
+              className="absolute -top-7 right-4 md:-top-11 md:right-8 z-20 w-10 h-10 md:w-14 md:h-14 rounded-full bg-[#fff5f8] border-4 md:border-[6px] border-white text-[#ff70ae] shadow-[0_8px_16px_rgba(255,112,174,0.35)] flex items-center justify-center cursor-pointer select-none"
+            >
+              <Heart className="w-5 h-5 md:w-7 md:h-7 stroke-[2.5]" fill="#ff70ae" fillOpacity={0.3} />
+            </motion.div>
+
+            {/* 3. Camera Bottom-Left/Middle-Left */}
+            <motion.div
+              animate={{ 
+                y: [0, -5, 0],
+                rotate: [0, -8, 0]
+              }}
+              transition={{
+                duration: 4.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.5
+              }}
+              whileHover={{ scale: 1.15, rotate: -15 }}
+              className="absolute bottom-6 -left-6 md:bottom-12 md:-left-10 z-20 w-10 h-10 md:w-14 md:h-14 rounded-full bg-[#fff5f8] border-4 md:border-[6px] border-white text-[#ff70ae] shadow-[0_8px_16px_rgba(255,112,174,0.35)] flex items-center justify-center cursor-pointer select-none"
+            >
+              <CameraIcon className="w-5 h-5 md:w-7 md:h-7 stroke-[2.5]" fill="#ff70ae" fillOpacity={0.15} />
+            </motion.div>
+
             <div className="aspect-[4/5] max-w-[200px] md:max-w-none mx-auto rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border-2 md:border-8 border-white shadow-2xl bg-white/40">
               <img src={dresscodeImage} alt="Dresscode" className="w-full h-full object-cover" />
             </div>
@@ -579,11 +803,11 @@ export default function App() {
       </section>
 
       {/* SCHEDULE SECTION */}
-      <section id="schedule" className="relative z-10 h-screen snap-start flex items-center justify-center px-4 md:px-6 py-6 md:py-10">
+      <section id="schedule" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-4 md:px-6 py-6 md:py-10">
         <div className="w-full max-w-2xl space-y-4 md:space-y-12">
-          <div className="text-center space-y-1 md:space-y-4">
+          <div className="text-center space-y-3 md:space-y-5">
             <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Today's Plan</span>
-            <h2 className="text-xl md:text-4xl font-serif">Here's our little birthday schedule ✨</h2>
+            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Here's our little birthday schedule ✨</h2>
           </div>
           
           <div className="space-y-3 md:space-y-6">
@@ -615,15 +839,15 @@ export default function App() {
       </section>
 
       {/* MEMORIES SECTION */}
-      <section id="memories" className="relative z-10 h-screen snap-start flex flex-col items-center justify-center px-6 overflow-hidden">
+      <section id="memories" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center px-6 overflow-hidden py-4">
         <div className="w-full max-w-5xl text-center space-y-6 md:space-y-12">
-          <div className="space-y-2 md:space-y-4">
+          <div className="space-y-3 md:space-y-5">
             <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Memories</span>
-            <h2 className="text-2xl md:text-6xl font-serif">Tiny moments that mean everything.</h2>
+            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Tiny moments that mean everything.</h2>
           </div>
 
           <div className="relative group max-w-[200px] md:max-w-sm mx-auto aspect-[9/16] rounded-[2rem] md:rounded-[3rem] overflow-hidden border-4 md:border-8 border-white shadow-2xl bg-pink-50">
-            {!isPlaceholder(memoryVideo) ? (
+            {!isPlaceholder(memoryVideo) && !videoError ? (
               <>
                 <video
                   ref={memoryVideoRef}
@@ -631,7 +855,10 @@ export default function App() {
                   playsInline
                   loop
                   className="w-full h-full object-cover"
-                  onError={() => setIsMemoryPlaying(false)}
+                  onError={() => {
+                    setIsMemoryPlaying(false);
+                    setVideoError(true);
+                  }}
                 />
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                   <button
@@ -655,29 +882,127 @@ export default function App() {
       </section>
 
       {/* IMAGE SECTION */}
-      <section id="image-section" className="relative z-10 h-screen snap-start flex items-center justify-center overflow-hidden px-4">
+      <section id="image-section" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center overflow-hidden px-4 py-8">
         <motion.div
           style={{
-            scale: 1 + imageSectionProgress * 0.1,
-            y: imageSectionProgress * -50
+            scale: 1 + imageSectionProgress * 0.05,
+            y: imageSectionProgress * -20
           }}
-          className="w-full h-full flex items-center justify-center"
+          className="w-full max-w-6xl flex flex-col items-center justify-center gap-4 md:gap-8"
         >
-          <img
-            src={imageSectionImage}
-            alt="Memories together"
-            className="max-h-[70vh] md:max-h-[85vh] w-auto rounded-[2rem] md:rounded-[4rem] shadow-2xl border-4 md:border-[12px] border-white"
-          />
+          {/* Header */}
+          <div className="text-center space-y-3.5 md:space-y-5 px-4">
+            <div>
+              <span className="text-[10px] md:text-xs font-bold tracking-[0.2em] text-[#ff70ae] uppercase bg-pink-50/80 px-4 py-1.5 rounded-full border border-pink-100/30 shadow-sm">
+                Future Memories Center
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Our Album of Love</h2>
+            <p className="text-[10px] md:text-sm text-[#8A5A68] max-w-md mx-auto md:pt-1">
+              Every sweet moment shared, hand in hand. Just waiting for our cute pictures to fill these frames tonight! ✨
+            </p>
+          </div>
+
+          {/* Polaroid Placeholders Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 w-full max-w-5xl px-4 items-center justify-center">
+            {[
+              {
+                id: 'coffee',
+                title: 'Our First Coffee ☕',
+                time: 'Warmest Hugs',
+                desc: 'Reserved for that perfect cozy laugh we shared...',
+                icon: <Coffee className="w-8 h-8 text-[#ff70ae]/80" />,
+                rotateClass: 'md:-rotate-3 hover:md:rotate-0',
+              },
+              {
+                id: 'sweet',
+                title: 'Prettiest Smile 🌸',
+                time: 'My Safest Place',
+                desc: 'Waiting for your bright face and lovely outfit tonight...',
+                icon: <Heart className="w-8 h-8 text-[#ff70ae]/80 animate-pulse" />,
+                rotateClass: 'md:rotate-2 hover:md:rotate-0',
+              },
+              {
+                id: 'dinner',
+                title: 'Tonight\'s Teppanyaki 🍽️',
+                time: '8 June 2026',
+                desc: 'Delicious memories loading live from Maison Tatsuya...',
+                icon: <Utensils className="w-8 h-8 text-[#ff70ae]/80" />,
+                rotateClass: 'md:-rotate-1 hover:md:rotate-0',
+              }
+            ].map((card, i) => (
+              <motion.div
+                key={card.id}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                whileHover={{ y: -6, scale: 1.03 }}
+                onClick={() => setGalleryToast(`Can't wait to fill "${card.title}" with our photos tonight! 📸💖`)}
+                className={`bg-white/90 p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-xl hover:shadow-2xl border border-white/80 flex flex-col gap-4 relative cursor-pointer select-none transition-all duration-300 ${card.rotateClass} max-w-[280px] md:max-w-none mx-auto w-full`}
+              >
+                {/* Washi Tape Ribbon Effect */}
+                <div className="absolute -top-3 left-1/2 -track-x-1/2 -translate-x-1/2 w-16 h-5 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[7px] font-bold text-[#ff70ae]/60 tracking-wider">
+                  LOVELY
+                </div>
+
+                {/* Inner Empty State Photo Slot */}
+                <div className="aspect-square w-full rounded-xl md:rounded-2xl border-2 border-dashed border-[#ff70ae]/30 bg-gradient-to-br from-[#fff5f8]/80 to-[#ffeff5]/40 flex flex-col items-center justify-center gap-3 relative overflow-hidden group/slot">
+                  {/* Glowing background halo */}
+                  <div className="absolute inset-x-0 inset-y-0 bg-[#ff70ae]/2 opacity-0 group-hover/slot:opacity-100 transition-opacity duration-300 rounded-xl" />
+                  
+                  <div className="bg-white/80 p-3 rounded-full shadow-sm text-[#ff70ae] group-hover/slot:scale-110 transition-transform duration-300">
+                    {card.icon}
+                  </div>
+                  <span className="text-[10px] md:text-xs font-semibold text-[#ff70ae]/70 tracking-wide uppercase px-2 text-center">
+                    Picture placeholder
+                  </span>
+                  <p className="text-[8px] md:text-[10px] text-[#8A5A68]/60 text-center max-w-[150px] px-2 leading-relaxed font-light">
+                    We'll put our beautiful photo here later!
+                  </p>
+                </div>
+
+                {/* Custom Handwritten Caption Panel */}
+                <div className="space-y-1.5 pt-1 text-left px-1">
+                  <div className="flex justify-between items-center gap-2">
+                    <h3 className="font-serif font-bold text-sm md:text-base text-[#4A2230] truncate">
+                      {card.title}
+                    </h3>
+                    <span className="text-[8px] md:text-[10px] text-[#ff70ae]/80 font-bold tracking-wider shrink-0 uppercase">
+                      {card.time}
+                    </span>
+                  </div>
+                  <p className="text-[10px] md:text-xs text-[#8A5A68] italic font-light leading-relaxed line-clamp-2">
+                    "{card.desc}"
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Toast Notification */}
+          <AnimatePresence>
+            {galleryToast && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[#4A2230] text-pink-100 px-6 py-2.5 rounded-full text-xs md:text-sm font-medium shadow-lg shadow-[#ff70ae]/15 border border-[#ff70ae]/20 flex items-center gap-2 mt-4 max-w-md text-center max-h-12 overflow-hidden"
+              >
+                <Heart className="w-4 h-4 fill-current text-[#ff70ae] shrink-0" />
+                <span>{galleryToast}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </section>
 
       {/* LETTER SECTION */}
-      <section id="letter" className="relative z-10 h-screen snap-start flex items-center justify-center px-6 py-6 md:py-20 lg:py-0 overflow-hidden">
+      <section id="letter" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-6 py-4 lg:py-0 overflow-hidden">
         <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-16 items-center">
           <div className="order-2 lg:order-1 space-y-4 md:space-y-8 text-center lg:text-left">
-            <div className="space-y-2 md:space-y-4">
+            <div className="space-y-3.5 md:space-y-5">
               <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">A Little Note</span>
-              <h2 className="text-2xl md:text-5xl font-serif leading-tight text-[#4A2230]">Happy Birthday, Ami Sayang 💖</h2>
+              <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Happy Birthday, Ami Sayang 💖</h2>
             </div>
             
             <div className="space-y-3 md:space-y-6 text-sm md:text-xl text-[#6D4552] font-light leading-relaxed">
@@ -706,15 +1031,15 @@ export default function App() {
       </section>
 
       {/* SURPRISE SECTION */}
-      <section id="surprise" className="relative z-10 h-screen snap-start flex items-center justify-center px-6">
+      <section id="surprise" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-6">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           className="text-center space-y-8"
         >
-          <div className="space-y-4">
+          <div className="space-y-4 md:space-y-5">
             <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">One More Thing 💕</span>
-            <h2 className="text-3xl md:text-6xl font-serif">Before Our Date Begins...</h2>
+            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Before Our Date Begins...</h2>
             <p className="text-base md:text-lg text-[#8A5A68] font-light max-w-md mx-auto">
               I prepared one last tiny surprise before I pick you up ✨
             </p>
@@ -722,7 +1047,7 @@ export default function App() {
           
           <button
             onClick={handleSurprise}
-            className="px-10 py-4 md:px-12 md:py-5 bg-[#ff70ae] text-white rounded-full font-bold text-base md:text-lg hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[#ff70ae]/30"
+            className="h-12 px-[16px] mx-[16px] my-[12px] inline-flex items-center justify-center bg-[#ff70ae] text-white rounded-full font-bold text-base hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[#ff70ae]/30"
           >
             Press Me Princess 👀
           </button>
@@ -770,7 +1095,7 @@ export default function App() {
                     )}
                     <button
                       onClick={handleOpenCamera}
-                      className="w-full max-w-xs py-4 bg-[#ff70ae] text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#ff5a9e] active:scale-95 transition-all shadow-xl shadow-[#ff70ae]/20"
+                      className="w-[calc(100%-32px)] max-w-xs h-12 px-[16px] mx-[16px] my-[12px] bg-[#ff70ae] text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#ff5a9e] active:scale-95 transition-all shadow-xl shadow-[#ff70ae]/20"
                     >
                       Open Camera 📸
                     </button>
@@ -844,8 +1169,8 @@ export default function App() {
                         <img src={capturedPhoto!} alt="Captured" className="w-full h-full object-cover" />
                         
                         {/* Result Controls Bar */}
-                        <div className="absolute bottom-12 inset-x-0 px-8 flex flex-col gap-3 z-20">
-                          <div className="flex gap-4">
+                        <div className="absolute bottom-12 inset-x-0 px-4 flex flex-col gap-3 z-20">
+                          <div className="flex gap-4 mx-[16px] my-[12px]">
                             <button
                               disabled={isUploading}
                               onClick={() => {
@@ -855,14 +1180,14 @@ export default function App() {
                                 link.click();
                                 handleUploadToSupabase();
                               }}
-                              className={`flex-1 py-4 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-2xl transition-all active:scale-95 ${isUploading ? 'bg-pink-300 cursor-not-allowed' : 'bg-[#ff70ae] shadow-pink-500/20 hover:scale-[1.02]'}`}
+                              className={`flex-1 h-12 px-[16px] text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-2xl transition-all active:scale-95 ${isUploading ? 'bg-pink-300 cursor-not-allowed' : 'bg-[#ff70ae] shadow-pink-500/20 hover:scale-[1.02]'}`}
                             >
                               {isUploading ? 'Uploading...' : uploadStatus === 'success' ? 'Saved! ✨' : 'Save Memory 💖'}
                             </button>
                             <button
                               onClick={handleOpenCamera}
                               disabled={isUploading}
-                              className="flex-1 py-4 bg-white/20 backdrop-blur-md text-white border border-white/40 rounded-2xl font-bold active:scale-95 transition-transform hover:bg-white/30"
+                              className="flex-1 h-12 px-[16px] bg-white/20 backdrop-blur-md text-white border border-white/40 rounded-2xl font-bold active:scale-95 transition-all hover:bg-white/30 flex items-center justify-center text-sm"
                             >
                               Retake 📸
                             </button>
@@ -896,9 +1221,13 @@ export default function App() {
 
       <button
         onClick={toggleMusic}
-        className={`fixed bottom-8 right-8 z-[60] w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-xl hover:scale-110 active:scale-95 ${isPlaying ? 'bg-[#ff70ae] text-white' : 'bg-white text-[#ff70ae]'}`}
+        className={`fixed bottom-8 right-8 z-[60] w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-xl hover:scale-110 active:scale-95 ${isPlaying ? 'bg-[#ff70ae] text-white' : 'bg-white text-[#ff70ae] border border-pink-100'}`}
       >
-        {isPlaying ? <Music2 className="animate-pulse" /> : <Music />}
+        {isPlaying ? (
+          <Music className="w-6 h-6 animate-pulse" />
+        ) : (
+          <MusicSlash className="w-6 h-6" />
+        )}
       </button>
     </div>
   );
