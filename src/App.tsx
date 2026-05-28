@@ -18,6 +18,7 @@ import {
   Square, 
   X, 
   ChevronRight,
+  ChevronLeft,
   Gift,
   Coffee,
   Utensils,
@@ -68,6 +69,14 @@ export default function App() {
   const [videoError, setVideoError] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
+  const [currentInviteImage, setCurrentInviteImage] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentInviteImage((prev) => (prev + 1) % invitationImages.length);
+    }, 3200);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (galleryToast) {
@@ -91,6 +100,11 @@ export default function App() {
     love: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/background/love.png',
     tree: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/background/tree.png',
   };
+
+  const invitationImages = [
+    'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/invitation/lil%20ami%202.png',
+    'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/invitation/lil%20ami.png'
+  ];
 
   const sectionNav = [
     { id: 'hero', label: 'Home' },
@@ -118,10 +132,41 @@ export default function App() {
   ];
 
   const schedule = [
-    { time: '13:00', title: 'Pickup My Princess', desc: 'Starting our special birthday date together 💕', icon: <Coffee className="w-6 h-6 text-[#ff70ae]" /> },
-    { time: '14:00 - 18:00', title: 'Misc To Do', desc: 'Spending the afternoon together and making memories ✨', icon: <Heart className="w-6 h-6 text-[#ff70ae]" /> },
-    { time: '18:30 - 19:00', title: 'Dinner Time', desc: 'Dinner together at MAISON TATSUYA Teppanyaki ❤️', icon: <Utensils className="w-6 h-6 text-[#ff70ae]" /> },
-    { time: '19:00 - End', title: 'Open The Gifts', desc: 'Ending the night with surprises made specially for you 🎁', icon: <Gift className="w-6 h-6 text-[#ff70ae]" /> },
+    { 
+      time: '10:00', 
+      title: 'Pickup my princess 🚗', 
+      desc: 'Dress comfortable, look pretty, and get ready for a full day of birthday magic built for you!', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/pickup.png',
+      icon: <Coffee className="w-5 h-5 text-[#ff70ae]" /> 
+    },
+    { 
+      time: '10:00 - 14:00', 
+      title: 'Flowers hunting 🌸', 
+      desc: 'Finding the absolute prettiest, freshest blooms to make your birthday room look stunning.', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/flowers.png',
+      icon: <Flower className="w-5 h-5 text-[#ff70ae]" /> 
+    },
+    { 
+      time: '14:00 - 19:00', 
+      title: 'Misc to do ✨', 
+      desc: 'Fun spontaneous activities, light treats, and capturing unforgettable snapshots of us.', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/misc%20to%20do.png',
+      icon: <Heart className="w-5 h-5 text-[#ff70ae]" /> 
+    },
+    { 
+      time: '19:00 - 20:00', 
+      title: 'Dinner Time 🍽️', 
+      desc: '(Resto still secret) A luxurious, cozy, and private live-cooking dining date together!', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/1st%20Resto.png',
+      icon: <Utensils className="w-5 h-5 text-[#ff70ae]" /> 
+    },
+    { 
+      time: '20:00 - End', 
+      title: 'Open The Gifts 🎁', 
+      desc: 'Unwrapping birthday surprises, making sweet midnight wishes, and finishing your magical day.', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Gifts.png',
+      icon: <Gift className="w-5 h-5 text-[#ff70ae]" /> 
+    },
   ];
 
   const scrollToSection = (sectionId: string) => {
@@ -187,6 +232,14 @@ export default function App() {
     setShowSurprise(prev => !prev);
   };
 
+  const handleCameraBack = () => {
+    stopCamera();
+    setCapturedPhotos([null, null, null]);
+    setCapturedPhoto(null);
+    setShowCamera(false);
+    setShowSurprise(false);
+  };
+
   const handleOpenCamera = async () => {
     setCameraError(null);
     try {
@@ -215,91 +268,163 @@ export default function App() {
     }
   };
 
-  const handleCapturePhoto = async () => {
+  const [capturedPhotos, setCapturedPhotos] = useState<(string | null)[]>([null, null, null]);
+  const [activeSlotIndex, setActiveSlotIndex] = useState<number>(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isCountingDown, setIsCountingDown] = useState<boolean>(false);
+  const [shutterFlash, setShutterFlash] = useState<boolean>(false);
+
+  const captureSingleShot = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     const video = videoRef.current;
-    const canvas = canvasRef.current;
     
-    // Forced 9:16 aspect ratio for portrait capture
-    const videoAspect = video.videoWidth / video.videoHeight;
-    const targetAspect = 9 / 16;
+    // We capture wide 16:9 ratio high-res image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 1280;
+    tempCanvas.height = 720;
+    const ctx = tempCanvas.getContext('2d');
+    if (!ctx) return;
     
-    // Setting canvas to high quality portrait resolution
-    canvas.width = 1080;
-    canvas.height = 1920;
+    // Mirror the video naturally for a natural front hook
+    ctx.save();
+    ctx.translate(tempCanvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+    ctx.restore();
     
-    const context = canvas.getContext('2d');
-    if (!context) return;
+    const shotDataUrl = tempCanvas.toDataURL('image/png');
+    
+    // Trigger shutter flash
+    setShutterFlash(true);
+    setTimeout(() => setShutterFlash(false), 150);
 
-    let sx, sy, sw, sh;
-    if (videoAspect > targetAspect) {
-      // Input is wider than 9:16 (usual case for landscape webcams)
-      sh = video.videoHeight;
-      sw = sh * targetAspect;
-      sx = (video.videoWidth - sw) / 2;
-      sy = 0;
-    } else {
-      // Input is taller than 9:16
-      sw = video.videoWidth;
-      sh = sw / targetAspect;
-      sx = 0;
-      sy = (video.videoHeight - sh) / 2;
+    const updated = [...capturedPhotos];
+    updated[activeSlotIndex] = shotDataUrl;
+    setCapturedPhotos(updated);
+
+    // Auto-advance to the next empty slot
+    const nextEmptyIndex = updated.findIndex((item) => item === null);
+    if (nextEmptyIndex !== -1) {
+      setActiveSlotIndex(nextEmptyIndex);
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    if (isCountingDown || shutterFlash || !showCamera) return;
+    
+    setIsCountingDown(true);
+    let secondsLeft = 3;
+    setCountdown(secondsLeft);
+    
+    const timer = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft > 0) {
+        setCountdown(secondsLeft);
+      } else {
+        clearInterval(timer);
+        setCountdown(null);
+        setIsCountingDown(false);
+        // Take single photo
+        captureSingleShot();
+      }
+    }, 850); // Countdown speed
+  };
+
+  const loadImage = (src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        console.error(`Failed to load ${src}, falling back with mock box`);
+        const dummy = document.createElement('canvas');
+        dummy.width = 100;
+        dummy.height = 100;
+        const dImg = new Image();
+        dImg.src = dummy.toDataURL();
+        resolve(dImg);
+      };
+      img.src = src;
+    });
+  };
+
+  const drawHeart = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
+    ctx.save();
+    ctx.fillStyle = 'white';
+    ctx.strokeStyle = '#ff70ae';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.translate(x, y);
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(-size/1.5, -size/1.5, -size * 1.2, size/3, 0, size);
+    ctx.bezierCurveTo(size * 1.2, size/3, size/1.5, -size/1.5, 0, 0);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  };
+
+  const generateCompositeStrip = async (photos: string[]) => {
+    if (photos.length < 3 || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Sweet vertical photobooth aspect ratio: 640x1600
+    canvas.width = 640;
+    canvas.height = 1600;
+
+    // Clear canvas
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw three horizontal 3:2 bounding boxes with vertical offsets
+    for (let i = 0; i < 3; i++) {
+      const yOffset = 80 + i * (340 + 40); // Y: 80, 460, 840
+      
+      // Load taken shot
+      try {
+        const img = await loadImage(photos[i]);
+        ctx.save();
+        // Inner clipping bounding box
+        ctx.beginPath();
+        ctx.roundRect(52, yOffset + 12, 536, 316, 16);
+        ctx.clip();
+        
+        // Draw centered cover cropping
+        const imgAspect = img.width / img.height;
+        const targetAspect = 536 / 316;
+        let dx, dy, dw, dh;
+        
+        if (imgAspect > targetAspect) {
+          dh = img.height;
+          dw = dh * targetAspect;
+          dx = (img.width - dw) / 2;
+          dy = 0;
+        } else {
+          dw = img.width;
+          dh = dw / targetAspect;
+          dx = 0;
+          dy = (img.height - dh) / 2;
+        }
+
+        ctx.drawImage(img, dx, dy, dw, dh, 52, yOffset + 12, 536, 316);
+        ctx.restore();
+      } catch (err) {
+        console.error("Slot drawing error:", err);
+      }
     }
 
-    // Fill background black in case of edge cases
-    context.fillStyle = 'black';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw cropped video frame
-    context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    // Overlay the beautiful custom Frame.png on top of everything!
+    try {
+      const frameImg = await loadImage('https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Frame.png');
+      ctx.drawImage(frameImg, 0, 0, 640, 1600);
+    } catch (e) {
+      console.error("Error overlaying Frame.png:", e);
+    }
 
-    // Draw Frame and Icons on Canvas
-    const drawElements = () => {
-      return new Promise<void>((resolve) => {
-        const loveImg = new Image();
-        loveImg.crossOrigin = "anonymous";
-        loveImg.src = backgroundImages.love;
-        
-        const finish = () => {
-          const iconSize = canvas.width * 0.15;
-          const padding = canvas.width * 0.04;
-
-          // Draw a cute white border
-          context.strokeStyle = 'white';
-          context.lineWidth = canvas.width * 0.03;
-          context.beginPath();
-          context.roundRect(padding, padding, canvas.width - padding * 2, canvas.height - padding * 2, canvas.width * 0.04);
-          context.stroke();
-
-          // Bottom Left
-          context.drawImage(loveImg, padding * 1.8, canvas.height - iconSize - padding * 1.8, iconSize, iconSize);
-          // Bottom Right
-          context.save();
-          context.translate(canvas.width - iconSize - padding * 1.8 + iconSize/2, canvas.height - iconSize - padding * 1.8 + iconSize/2);
-          context.scale(-1, 1);
-          context.drawImage(loveImg, -iconSize/2, -iconSize/2, iconSize, iconSize);
-          context.restore();
-          
-          resolve();
-        };
-
-        loveImg.onload = finish;
-        loveImg.onerror = () => {
-          console.error("Failed to load frame icon image");
-          resolve();
-        };
-      });
-    };
-
-    await drawElements();
-    
-    const image = canvas.toDataURL('image/png');
-    setCapturedPhoto(image);
-    setUploadStatus('idle'); // Reset upload status
-    
-    const stream = video.srcObject as MediaStream | null;
-    if (stream) stream.getTracks().forEach(track => track.stop());
-    setShowCamera(false);
+    const resultUrl = canvas.toDataURL('image/png');
+    setCapturedPhoto(resultUrl);
+    setUploadStatus('idle'); // Settle idle for uploading
   };
 
   const triggerConfetti = () => {
@@ -392,29 +517,6 @@ export default function App() {
     >
       {/* Background Parallax Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        {floatingBackground.map((item, index) => (
-          <motion.div
-            key={index}
-            className={`absolute opacity-20 md:opacity-40 ${item.wrapperClass}`}
-            style={{ y: scrollProgress * item.parallax }}
-            animate={{
-              y: [0, -20, 0],
-              rotate: [item.rotate, -item.rotate, item.rotate],
-            }}
-            transition={{
-              duration: item.duration,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            <img 
-              src={item.src} 
-              alt="" 
-              className={`object-contain drop-shadow-xl ${item.imageClass}`} 
-            />
-          </motion.div>
-        ))}
-
         {bottomTrees.map((item, index) => (
           <div
             key={index}
@@ -490,24 +592,24 @@ export default function App() {
                   whileTap={{ scale: 0.95 }}
                   transition={{ 
                     type: 'spring', 
-                    stiffness: 700, 
-                    damping: 22, 
-                    mass: 0.3
+                    stiffness: 1100, 
+                    damping: 20, 
+                    mass: 0.1
                   }}
-                  className={`w-52 h-10 px-5 rounded-full flex items-center justify-between outline-none cursor-pointer transition-all duration-300 select-none ${
+                  className={`w-52 h-10 px-5 rounded-full flex items-center justify-between outline-none cursor-pointer transition-colors duration-100 select-none ${
                     isActive 
                       ? 'bg-white/85 backdrop-blur-2xl border border-white/60 shadow-lg shadow-[#ff70ae]/10' 
                       : 'bg-transparent border border-transparent hover:bg-white/35 hover:border-white/20'
                   }`}
                 >
-                  <span className={`text-sm font-serif font-medium tracking-wide transition-all duration-300 transform-gpu ${
+                  <span className={`text-sm font-serif font-medium tracking-wide transition-colors duration-100 transform-gpu ${
                     isActive 
                       ? 'text-[#ff70ae] font-semibold opacity-100' 
                       : 'text-[#4A2230]/40 group-hover/sidebar:text-[#4A2230]/75 group-hover/sidebar:opacity-100 hover:!text-[#ff70ae] hover:!font-semibold'
                   }`}>
                     {item.label}
                   </span>
-                  <div className={`rounded-full transition-all duration-300 transform-gpu ${
+                  <div className={`rounded-full transition-colors duration-100 transform-gpu ${
                     isActive 
                       ? 'w-3 h-3 bg-[#ff70ae] scale-110 shadow-[0_0_10px_rgba(255,112,174,0.6)]' 
                       : 'w-1.5 h-1.5 bg-[#ff70ae]/30 group-hover/sidebar:bg-[#ff70ae]/65 hover:!bg-[#ff70ae] hover:!scale-125'
@@ -673,50 +775,98 @@ export default function App() {
 
       {/* INVITATION SECTION */}
       <section id="invitation" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-4 md:px-6">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md bg-white/60 backdrop-blur-2xl p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-white/40 shadow-2xl space-y-4 md:space-y-8 flex flex-col justify-between"
-        >
-          <div className="space-y-3.5 md:space-y-5">
-            <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Invitation</span>
-            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Ami's 24th Birthday</h2>
-          </div>
-          
-          <div className="space-y-3 md:space-y-4">
-            <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
-              <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
-                <Calendar size={20} />
-              </div>
-              <p className="font-medium text-sm md:text-base">8 June 2026</p>
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
+          {/* Information Card (Left) */}
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            className="w-full bg-white/60 backdrop-blur-2xl p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-white/40 shadow-2xl space-y-4 md:space-y-6 flex flex-col justify-between h-full"
+          >
+            <div className="space-y-3.5 md:space-y-5">
+              <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Invitation</span>
+              <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Ami's 24th Birthday</h2>
             </div>
-            <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
-              <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
-                <Clock size={20} />
+            
+            <div className="space-y-3 md:space-y-4">
+              <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
+                  <Calendar size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Date</p>
+                  <p className="font-semibold text-sm md:text-base text-[#4A2230]">8 June 2026</p>
+                </div>
               </div>
-              <p className="font-medium text-sm md:text-base">13:00</p>
-            </div>
-            <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
-              <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
-                <MapPin size={20} />
+              <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
+                  <Clock size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Time</p>
+                  <p className="font-semibold text-sm md:text-base text-[#4A2230]">10:00 AM</p>
+                </div>
               </div>
-              <p className="font-medium text-xs md:text-sm">MAISON TATSUYA Teppanyaki Summarecon Bekasi</p>
+              <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
+                <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
+                  <MapPin size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Location</p>
+                  <p className="font-semibold text-sm md:text-base text-[#4A2230]">Secret Place ✨</p>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <p className="text-sm text-[#8A5A68]">I already planned everything for us ❤️</p>
-          
-          <div className="w-full flex justify-center">
-            <a
-              href="https://maps.app.goo.gl/WXDou4CoJxN9cbbr9"
-              target="_blank"
-              rel="noreferrer"
-              className="w-[calc(100%-32px)] h-12 px-[16px] mx-[16px] my-[12px] flex items-center justify-center gap-2 bg-[#ff70ae] text-white rounded-2xl font-semibold hover:bg-[#ff5a9e] transition-colors text-sm md:text-base"
-            >
-              View Location <ChevronRight size={18} />
-            </a>
-          </div>
-        </motion.div>
+            <p className="text-sm text-[#8A5A68] italic">I already planned everything for us ❤️</p>
+          </motion.div>
+
+          {/* Dynamic Polaroid Slideshow Card (Right) */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            className="relative flex justify-center items-center"
+          >
+            {/* Hanging Tape stickers or ribbon */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#ff70ae]/20 border border-[#ff70ae]/30 rounded-sm rotate-2 z-20 flex items-center justify-center text-[8px] font-bold text-[#ff70ae] tracking-widest shadow-sm">
+              PRETTY GIRL
+            </div>
+
+            {/* Polaroid Base Frame */}
+            <div className="bg-white p-4 pb-12 rounded-[2rem] shadow-2xl border border-pink-100/30 max-w-[280px] md:max-w-xs w-full rotate-[-2deg] transition-transform hover:rotate-0 duration-500 relative group">
+              {/* Image slideshow window */}
+              <div className="aspect-square w-full rounded-xl overflow-hidden bg-pink-50 relative border border-pink-100">
+                <AnimatePresence mode="wait">
+                  <motion.img
+                    key={currentInviteImage}
+                    src={invitationImages[currentInviteImage]}
+                    initial={{ opacity: 0, scale: 1.05 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
+                    alt="Little Ami"
+                    className="w-full h-full object-cover"
+                  />
+                </AnimatePresence>
+                
+                {/* Visual Indicator Dots */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                  {invitationImages.map((_, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentInviteImage ? 'w-4 bg-[#ff70ae]' : 'w-1.5 bg-white/60'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Polaroid Footer caption */}
+              <div className="mt-4 text-center">
+                <p className="font-serif italic text-lg text-[#ff70ae] leading-none shrink-0 font-semibold">Little Ami 🌸</p>
+                <p className="text-[10px] text-[#8A5A68] tracking-widest uppercase mt-1">Our birthday girl tonight</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       {/* DRESSCODE SECTION */}
@@ -739,59 +889,6 @@ export default function App() {
             whileInView={{ opacity: 1, scale: 1 }}
             className="relative order-1 md:order-2"
           >
-            {/* Cute Pink Ornaments around the frame */}
-            {/* 1. Flower Top-Left */}
-            <motion.div
-              animate={{ 
-                y: [0, -6, 0],
-                rotate: [0, 8, 0]
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              whileHover={{ scale: 1.15, rotate: 15 }}
-              className="absolute -top-4 -left-4 md:-top-7 md:-left-7 z-20 w-12 h-12 md:w-16 md:h-16 rounded-full bg-[#fff5f8] border-4 md:border-[6px] border-white text-[#ff70ae] shadow-[0_8px_16px_rgba(255,112,174,0.35)] flex items-center justify-center cursor-pointer select-none"
-            >
-              <Flower className="w-6 h-6 md:w-8 md:h-8 stroke-[2.5]" fill="#ff70ae" fillOpacity={0.2} />
-            </motion.div>
-
-            {/* 2. Heart Top-Right */}
-            <motion.div
-              animate={{ 
-                scale: [1, 1.06, 1],
-                y: [0, -3, 0]
-              }}
-              transition={{
-                duration: 2.8,
-                repeat: Infinity,
-                ease: "easeInOut"
-              }}
-              whileHover={{ scale: 1.2 }}
-              className="absolute -top-7 right-4 md:-top-11 md:right-8 z-20 w-10 h-10 md:w-14 md:h-14 rounded-full bg-[#fff5f8] border-4 md:border-[6px] border-white text-[#ff70ae] shadow-[0_8px_16px_rgba(255,112,174,0.35)] flex items-center justify-center cursor-pointer select-none"
-            >
-              <Heart className="w-5 h-5 md:w-7 md:h-7 stroke-[2.5]" fill="#ff70ae" fillOpacity={0.3} />
-            </motion.div>
-
-            {/* 3. Camera Bottom-Left/Middle-Left */}
-            <motion.div
-              animate={{ 
-                y: [0, -5, 0],
-                rotate: [0, -8, 0]
-              }}
-              transition={{
-                duration: 4.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.5
-              }}
-              whileHover={{ scale: 1.15, rotate: -15 }}
-              className="absolute bottom-6 -left-6 md:bottom-12 md:-left-10 z-20 w-10 h-10 md:w-14 md:h-14 rounded-full bg-[#fff5f8] border-4 md:border-[6px] border-white text-[#ff70ae] shadow-[0_8px_16px_rgba(255,112,174,0.35)] flex items-center justify-center cursor-pointer select-none"
-            >
-              <CameraIcon className="w-5 h-5 md:w-7 md:h-7 stroke-[2.5]" fill="#ff70ae" fillOpacity={0.15} />
-            </motion.div>
-
             <div className="aspect-[4/5] max-w-[200px] md:max-w-none mx-auto rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border-2 md:border-8 border-white shadow-2xl bg-white/40">
               <img src={dresscodeImage} alt="Dresscode" className="w-full h-full object-cover" />
             </div>
@@ -804,33 +901,32 @@ export default function App() {
 
       {/* SCHEDULE SECTION */}
       <section id="schedule" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-4 md:px-6 py-6 md:py-10">
-        <div className="w-full max-w-2xl space-y-4 md:space-y-12">
-          <div className="text-center space-y-3 md:space-y-5">
-            <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Today's Plan</span>
+        <div className="w-full max-w-2xl space-y-4 md:space-y-8 select-none">
+          <div className="text-center space-y-3.5 md:space-y-4">
+            <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-100/20">Today's Plan</span>
             <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Here's our little birthday schedule ✨</h2>
           </div>
           
-          <div className="space-y-3 md:space-y-6">
+          <div className="space-y-2 md:space-y-4 max-h-[60vh] md:max-h-none overflow-y-auto pr-1">
             {schedule.map((item, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex gap-3 md:gap-6 p-3 md:p-6 bg-white/40 backdrop-blur-md rounded-[1.2rem] md:rounded-3xl border border-white/20 items-center group hover:bg-white/60 transition-all cursor-default"
+                transition={{ delay: i * 0.08, duration: 0.4 }}
+                className="flex gap-3 md:gap-6 p-3 md:p-4 bg-white/40 backdrop-blur-md rounded-[1.2rem] md:rounded-3xl border border-white/20 items-center group cursor-default transition-all duration-300 hover:bg-white/75 hover:border-[#ff70ae]/30 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl hover:shadow-[#ff70ae]/5"
               >
-                <div className="w-10 h-10 md:w-14 md:h-14 shrink-0 rounded-lg md:rounded-2xl bg-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                  {/* Scaling the icon for mobile */}
-                  <div className="scale-75 md:scale-100">
-                    {item.icon}
-                  </div>
+                {/* Image item thumbnail */}
+                <div className="w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-xl md:rounded-[1.25rem] bg-white border border-[#ff70ae]/15 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-300 relative flex items-center justify-center">
+                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                 </div>
+
                 <div className="flex-1 min-w-0 space-y-0.5 md:space-y-1">
                   <div className="flex justify-between items-center gap-2">
-                    <h3 className="font-bold text-sm md:text-xl truncate">{item.title}</h3>
-                    <span className="text-[9px] md:text-sm font-medium text-[#ff70ae] shrink-0">{item.time}</span>
+                    <h3 className="font-bold text-sm md:text-lg text-[#4A2230] truncate group-hover:text-[#ff70ae] transition-colors">{item.title}</h3>
+                    <span className="text-[9px] md:text-sm font-semibold text-[#ff70ae] shrink-0 bg-[#fff5f8] px-2.5 py-0.5 rounded-full border border-pink-100/20">{item.time}</span>
                   </div>
-                  <p className="text-[10px] md:text-base text-[#8A5A68] line-clamp-1 md:line-clamp-2">{item.desc}</p>
+                  <p className="text-[10px] md:text-sm text-[#8A5A68] leading-relaxed line-clamp-2">{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -839,141 +935,103 @@ export default function App() {
       </section>
 
       {/* MEMORIES SECTION */}
-      <section id="memories" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center px-6 overflow-hidden py-4">
-        <div className="w-full max-w-5xl text-center space-y-6 md:space-y-12">
-          <div className="space-y-3 md:space-y-5">
-            <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Memories</span>
+      <section id="memories" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center px-4 md:px-6 overflow-hidden py-4">
+        <div className="w-full max-w-5xl text-center space-y-4 md:space-y-8 select-none">
+          <div className="space-y-3.5 md:space-y-4">
+            <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-100/20">Memories</span>
             <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Tiny moments that mean everything.</h2>
           </div>
 
-          <div className="relative group max-w-[200px] md:max-w-sm mx-auto aspect-[9/16] rounded-[2rem] md:rounded-[3rem] overflow-hidden border-4 md:border-8 border-white shadow-2xl bg-pink-50">
-            {!isPlaceholder(memoryVideo) && !videoError ? (
-              <>
-                <video
-                  ref={memoryVideoRef}
-                  src={memoryVideo}
-                  playsInline
-                  loop
-                  className="w-full h-full object-cover"
-                  onError={() => {
-                    setIsMemoryPlaying(false);
-                    setVideoError(true);
-                  }}
-                />
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                  <button
-                    onClick={toggleMemoryVideo}
-                    className="w-20 h-20 rounded-full bg-white/90 backdrop-blur flex items-center justify-center text-[#ff70ae] hover:scale-110 transition-transform shadow-xl"
-                  >
-                    {isMemoryPlaying ? <Square size={32} fill="currentColor" /> : <Play size={32} className="ml-2" fill="currentColor" />}
-                  </button>
+          {/* 3 Horizontal Video Frames */}
+          <div className="grid grid-cols-3 gap-3 md:gap-8 max-w-4xl mx-auto w-full items-center justify-center pt-2">
+            {[
+              { id: 1, title: 'Cute Hugs 🧸', desc: 'Cozy moments in our safe place.', rotate: '-rotate-2 hover:rotate-0' },
+              { id: 2, title: 'Your Smile 🌸', desc: 'Chasing sweet pastel pink skies.', rotate: 'rotate-1 hover:rotate-0' },
+              { id: 3, title: 'Date Nights 🍰', desc: 'Sipping coffee, laughing forever.', rotate: 'rotate-3 hover:rotate-0' }
+            ].map((vid) => (
+              <motion.div
+                key={vid.id}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className={`relative bg-black rounded-2xl md:rounded-[2rem] overflow-hidden aspect-[9/16] border-[3px] md:border-[6px] border-white shadow-xl flex flex-col justify-between p-2 md:p-3 cursor-default transition-all duration-300 ${vid.rotate}`}
+              >
+                {/* Vintage overlay texture */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.4))] pointer-events-none z-10" />
+                <div className="absolute top-2 left-2 flex items-center gap-1 z-20">
+                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500 animate-ping" />
+                  <span className="text-[6px] md:text-[10px] font-mono text-red-500 font-bold">REC</span>
                 </div>
-              </>
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-[#ff70ae] shadow-sm">
-                  <Play size={32} className="ml-1" />
+                
+                {/* Visual grid overlay to represent retro camera */}
+                <div className="absolute inset-x-2 inset-y-8 border border-white/5 rounded-lg pointer-events-none z-10" />
+
+                {/* Translucent Play container */}
+                <div className="flex-1 flex flex-col items-center justify-center space-y-1.5 z-10">
+                  <div className="w-8 h-8 md:w-14 md:h-14 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/20 animate-pulse">
+                    <Play size={16} className="translate-x-[1px] md:scale-125 text-white" fill="currentColor" />
+                  </div>
+                  <span className="text-[5px] md:text-[10px] font-mono text-white/40 tracking-widest uppercase">30 FPS</span>
                 </div>
-                <p className="text-sm text-[#8A5A68]">Memory video path not set yet 💕</p>
-              </div>
-            )}
+
+                {/* Subtitle / film sticker area */}
+                <div className="z-10 bg-white/10 backdrop-blur-sm p-1 md:p-2.5 rounded-lg border border-white/10 text-left">
+                  <p className="font-semibold text-[7px] md:text-xs text-white leading-none">{vid.title}</p>
+                  <p className="text-[6px] md:text-[10px] text-white/70 line-clamp-1 mt-0.5">{vid.desc}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* IMAGE SECTION */}
-      <section id="image-section" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center overflow-hidden px-4 py-8">
+      <section id="image-section" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center overflow-hidden px-4 py-4">
         <motion.div
           style={{
             scale: 1 + imageSectionProgress * 0.05,
-            y: imageSectionProgress * -20
+            y: imageSectionProgress * -15
           }}
-          className="w-full max-w-6xl flex flex-col items-center justify-center gap-4 md:gap-8"
+          className="w-full max-w-5xl flex flex-col items-center justify-center gap-4 md:gap-6 h-full"
         >
           {/* Header */}
-          <div className="text-center space-y-3.5 md:space-y-5 px-4">
+          <div className="text-center space-y-3.5 md:space-y-4 px-4 select-none">
             <div>
               <span className="text-[10px] md:text-xs font-bold tracking-[0.2em] text-[#ff70ae] uppercase bg-pink-50/80 px-4 py-1.5 rounded-full border border-pink-100/30 shadow-sm">
-                Future Memories Center
+                Mini album of us
               </span>
             </div>
             <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Our Album of Love</h2>
-            <p className="text-[10px] md:text-sm text-[#8A5A68] max-w-md mx-auto md:pt-1">
+            <p className="text-[10px] md:text-sm text-[#8A5A68] max-w-md mx-auto">
               Every sweet moment shared, hand in hand. Just waiting for our cute pictures to fill these frames tonight! ✨
             </p>
           </div>
 
-          {/* Polaroid Placeholders Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 w-full max-w-5xl px-4 items-center justify-center">
+          {/* Polaroid 3x2 Grid */}
+          <div className="grid grid-cols-3 gap-2.5 md:gap-5 w-full max-w-4xl px-2 overflow-y-auto max-h-[60vh] md:max-h-none select-none items-center pt-2">
             {[
-              {
-                id: 'coffee',
-                title: 'Our First Coffee ☕',
-                time: 'Warmest Hugs',
-                desc: 'Reserved for that perfect cozy laugh we shared...',
-                icon: <Coffee className="w-8 h-8 text-[#ff70ae]/80" />,
-                rotateClass: 'md:-rotate-3 hover:md:rotate-0',
-              },
-              {
-                id: 'sweet',
-                title: 'Prettiest Smile 🌸',
-                time: 'My Safest Place',
-                desc: 'Waiting for your bright face and lovely outfit tonight...',
-                icon: <Heart className="w-8 h-8 text-[#ff70ae]/80 animate-pulse" />,
-                rotateClass: 'md:rotate-2 hover:md:rotate-0',
-              },
-              {
-                id: 'dinner',
-                title: 'Tonight\'s Teppanyaki 🍽️',
-                time: '8 June 2026',
-                desc: 'Delicious memories loading live from Maison Tatsuya...',
-                icon: <Utensils className="w-8 h-8 text-[#ff70ae]/80" />,
-                rotateClass: 'md:-rotate-1 hover:md:rotate-0',
-              }
+              { id: 'ours-0', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%206.png', title: 'Perfect Days 🌸', subtitle: 'Warm Sunshine', rotate: 'md:-rotate-2' },
+              { id: 'ours-1', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%201.png', title: 'Cozy Chats ☕', subtitle: 'Pure Happiness', rotate: 'md:rotate-1' },
+              { id: 'ours-2', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%202.png', title: 'Lovely Gaze 👀', subtitle: 'My Whole World', rotate: 'md:-rotate-1' },
+              { id: 'ours-3', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%203.png', title: 'Warm Hugs 🧸', subtitle: 'Safest Place', rotate: 'md:rotate-2' },
+              { id: 'ours-4', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%204.png', title: 'Sweet Laughs 😄', subtitle: 'Infinite Joy', rotate: 'md:-rotate-2' },
+              { id: 'ours-5', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%205.png', title: 'Together Always ♾️', subtitle: 'My Special One', rotate: 'md:rotate-1' },
             ].map((card, i) => (
               <motion.div
                 key={card.id}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                whileHover={{ y: -6, scale: 1.03 }}
-                onClick={() => setGalleryToast(`Can't wait to fill "${card.title}" with our photos tonight! 📸💖`)}
-                className={`bg-white/90 p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-xl hover:shadow-2xl border border-white/80 flex flex-col gap-4 relative cursor-pointer select-none transition-all duration-300 ${card.rotateClass} max-w-[280px] md:max-w-none mx-auto w-full`}
+                transition={{ delay: (i % 3) * 0.05, duration: 0.4 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                onClick={() => setGalleryToast(`Beautiful moment: "${card.title}" 🥺💕`)}
+                className={`bg-white p-2 md:p-3 rounded-xl md:rounded-2xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} max-w-[120px] md:max-w-none mx-auto w-full`}
               >
                 {/* Washi Tape Ribbon Effect */}
-                <div className="absolute -top-3 left-1/2 -track-x-1/2 -translate-x-1/2 w-16 h-5 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[7px] font-bold text-[#ff70ae]/60 tracking-wider">
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-3.5 md:w-16 md:h-5 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[5px] md:text-[7px] font-bold text-[#ff70ae]/70 tracking-wider">
                   LOVELY
                 </div>
 
-                {/* Inner Empty State Photo Slot */}
-                <div className="aspect-square w-full rounded-xl md:rounded-2xl border-2 border-dashed border-[#ff70ae]/30 bg-gradient-to-br from-[#fff5f8]/80 to-[#ffeff5]/40 flex flex-col items-center justify-center gap-3 relative overflow-hidden group/slot">
-                  {/* Glowing background halo */}
-                  <div className="absolute inset-x-0 inset-y-0 bg-[#ff70ae]/2 opacity-0 group-hover/slot:opacity-100 transition-opacity duration-300 rounded-xl" />
-                  
-                  <div className="bg-white/80 p-3 rounded-full shadow-sm text-[#ff70ae] group-hover/slot:scale-110 transition-transform duration-300">
-                    {card.icon}
-                  </div>
-                  <span className="text-[10px] md:text-xs font-semibold text-[#ff70ae]/70 tracking-wide uppercase px-2 text-center">
-                    Picture placeholder
-                  </span>
-                  <p className="text-[8px] md:text-[10px] text-[#8A5A68]/60 text-center max-w-[150px] px-2 leading-relaxed font-light">
-                    We'll put our beautiful photo here later!
-                  </p>
-                </div>
-
-                {/* Custom Handwritten Caption Panel */}
-                <div className="space-y-1.5 pt-1 text-left px-1">
-                  <div className="flex justify-between items-center gap-2">
-                    <h3 className="font-serif font-bold text-sm md:text-base text-[#4A2230] truncate">
-                      {card.title}
-                    </h3>
-                    <span className="text-[8px] md:text-[10px] text-[#ff70ae]/80 font-bold tracking-wider shrink-0 uppercase">
-                      {card.time}
-                    </span>
-                  </div>
-                  <p className="text-[10px] md:text-xs text-[#8A5A68] italic font-light leading-relaxed line-clamp-2">
-                    "{card.desc}"
-                  </p>
+                {/* Inner Image Slot */}
+                <div className="aspect-square w-full rounded-lg md:rounded-xl overflow-hidden border border-pink-100 bg-pink-50 relative flex flex-col items-center justify-center text-center">
+                  <img src={card.src} alt={card.title} className="w-full h-full object-cover" />
                 </div>
               </motion.div>
             ))}
@@ -986,10 +1044,10 @@ export default function App() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-[#4A2230] text-pink-100 px-6 py-2.5 rounded-full text-xs md:text-sm font-medium shadow-lg shadow-[#ff70ae]/15 border border-[#ff70ae]/20 flex items-center gap-2 mt-4 max-w-md text-center max-h-12 overflow-hidden"
+                className="bg-[#4A2230] text-pink-100 px-6 py-2 rounded-full text-xs md:text-sm font-medium shadow-lg shadow-[#ff70ae]/15 border border-[#ff70ae]/20 flex items-center gap-2 mt-2 max-w-md text-center"
               >
                 <Heart className="w-4 h-4 fill-current text-[#ff70ae] shrink-0" />
-                <span>{galleryToast}</span>
+                <span className="truncate max-w-[280px]">{galleryToast}</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -1060,155 +1118,334 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-white/95 backdrop-blur-xl md:bg-[#ffeff6]/90"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs"
             >
-              {/* Close Button - Clear and prominent */}
-              <button
-                onClick={handleSurprise}
-                className="absolute top-6 right-6 md:top-10 md:right-10 w-12 h-12 flex items-center justify-center bg-[#ff70ae] text-white rounded-full shadow-2xl z-[200] hover:scale-110 active:scale-90 transition-all border-4 border-white"
-                aria-label="Close"
-              >
-                <X size={24} strokeWidth={3} />
-              </button>
+              {/* Screen 2: Intro Popup Modal (displays when camera is NOT open yet) */}
+              {!showCamera && (
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  className="w-full max-w-md bg-white rounded-[2rem] p-8 md:p-10 shadow-2xl relative border border-pink-100/30 flex flex-col items-center text-center space-y-6 md:space-y-8 select-none m-4"
+                >
+                  {/* Close button in top-right of the modal box */}
+                  <button
+                    onClick={handleSurprise}
+                    className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-full transition-all active:scale-90 shadow-sm z-30"
+                    aria-label="Close"
+                  >
+                    <X size={16} strokeWidth={2.5} />
+                  </button>
 
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full h-full md:h-[94vh] md:max-w-md md:aspect-[9/16] bg-white md:rounded-[3rem] shadow-2xl relative overflow-hidden flex flex-col"
-              >
-                {/* Intro Screen */}
-                {!showCamera && !capturedPhoto && (
-                  <div className="flex-1 flex flex-col items-center justify-center p-10 text-center space-y-8">
-                    <div className="w-24 h-24 bg-[#ffeff6] rounded-full flex items-center justify-center text-[#ff70ae] shadow-inner mb-2">
-                       <CameraIcon size={40} />
-                    </div>
-                    <div className="space-y-4">
-                      <h3 className="text-3xl font-serif text-[#4A2230]">Show your cute face 🥺</h3>
-                      <p className="text-[#8A5A68] leading-relaxed">
-                        I want to see your beautiful reaction to this little website I made for you...
-                        This moment deserves to be remembered ✨
-                      </p>
-                    </div>
-                    {cameraError && (
-                      <p className="text-xs text-red-500 bg-red-50 p-3 rounded-xl border border-red-100">{cameraError}</p>
-                    )}
-                    <button
-                      onClick={handleOpenCamera}
-                      className="w-[calc(100%-32px)] max-w-xs h-12 px-[16px] mx-[16px] my-[12px] bg-[#ff70ae] text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-[#ff5a9e] active:scale-95 transition-all shadow-xl shadow-[#ff70ae]/20"
-                    >
-                      Open Camera 📸
-                    </button>
+                  <div className="w-20 h-20 md:w-24 md:h-24 bg-[#fff5f8] rounded-full flex items-center justify-center text-[#ff70ae] shadow-inner mb-1 border border-pink-100">
+                    <CameraIcon size={36} />
                   </div>
-                )}
 
-                {/* Full Preview Camera / Result UI (Forced 9:16) */}
-                {(showCamera || capturedPhoto) && (
-                  <div className="relative flex-1 bg-black overflow-hidden group">
-                    {showCamera ? (
-                      <>
-                        <video 
-                          ref={videoRef} 
-                          autoPlay 
-                          playsInline 
-                          muted 
-                          className="w-full h-full object-cover"
-                          onLoadedMetadata={(e) => {
-                            const video = e.currentTarget;
-                            video.play().catch(err => console.error("Video play error:", err));
-                          }}
-                        />
-                        {/* Interactive Framing Guides Overlay */}
-                        <div className="absolute inset-0 pointer-events-none z-10 p-8 flex flex-col items-center justify-center">
-                          {/* Main Face Frame */}
-                          <motion.div 
-                            animate={{ 
-                              borderColor: ["rgba(255,255,255,0.4)", "rgba(255,112,174,0.8)", "rgba(255,255,255,0.4)"],
-                            }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="w-full aspect-[3/4] border-2 border-dashed border-white/50 rounded-[4rem] relative"
-                          >
-                            {/* Inner Corner Guides */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white/20 rounded-full" />
-                          </motion.div>
+                  <div className="space-y-3.5">
+                    <h3 className="text-2xl md:text-3xl font-serif text-[#4A2230] font-semibold">Show your cute face 🥺</h3>
+                    <p className="text-xs md:text-sm text-[#8A5A68] leading-relaxed max-w-xs mx-auto">
+                      I want to see your beautiful reaction to this little website I made for you... Keep this sweet moment remembered forever ✨
+                    </p>
+                  </div>
 
-                          {/* Outer Corners */}
-                          <div className="absolute top-10 left-10 w-10 h-10 border-t-4 border-l-4 border-white rounded-tl-2xl" />
-                          <div className="absolute top-10 right-10 w-10 h-10 border-t-4 border-r-4 border-white rounded-tr-2xl" />
-                          <div className="absolute bottom-10 left-10 w-10 h-10 border-b-4 border-l-4 border-white rounded-bl-2xl" />
-                          <div className="absolute bottom-10 right-10 w-10 h-10 border-b-4 border-r-4 border-white rounded-br-2xl" />
+                  {cameraError && (
+                    <p className="text-xs text-red-500 bg-red-50 p-3 rounded-xl border border-red-100 w-full">
+                      {cameraError}
+                    </p>
+                  )}
 
-                          {/* Live Status Badge */}
-                          <div className="absolute top-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/20">
-                            <div className="w-2 h-2 bg-[#ff70ae] rounded-full animate-pulse" />
-                            <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em]">Ready to Smile?</span>
-                          </div>
+                  <button
+                    onClick={handleOpenCamera}
+                    className="w-full h-12 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-pink-200/50 active:scale-95 text-sm md:text-base"
+                  >
+                    Open Camera 📸
+                  </button>
+                </motion.div>
+              )}
 
-                          {/* Decorative Icons Overlay */}
-                          <div className="absolute bottom-32 left-8 right-8 flex justify-between">
-                            <img src={backgroundImages.love} alt="" className="w-14 h-14 object-contain animate-bounce" style={{ animationDuration: '3s' }} />
-                            <img src={backgroundImages.love} alt="" className="w-14 h-14 object-contain animate-bounce scale-x-[-1]" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
-                          </div>
+              {/* Screens 3 & 4: Immersive Fullscreen-feeling Camera Workspace */}
+              {showCamera && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="fixed inset-0 z-[105] bg-[#fff5f8] overflow-y-auto w-full h-full flex items-center justify-center py-6 px-4 md:px-8"
+                >
+                  <div className="w-full max-w-2xl bg-white/60 backdrop-blur-md border border-white/50 rounded-3xl p-4 md:p-8 shadow-2xl select-none flex flex-col space-y-4 md:space-y-6 relative">
+                    
+                    {/* Top Status and Back-Close Action Bar */}
+                    <div className="flex items-center justify-between shrink-0">
+                      <button
+                        onClick={handleCameraBack}
+                        className="px-4 py-2 rounded-full bg-white border border-pink-100 text-[#ff70ae] font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-pink-50 hover:border-pink-200 transition-colors"
+                      >
+                        <ChevronLeft size={16} strokeWidth={3} />
+                        Close
+                      </button>
+
+                      <span className="text-[10px] md:text-xs font-extrabold text-[#ff70ae] tracking-wider uppercase bg-[#fff5f8] px-4 py-1.5 rounded-full border border-pink-200/30 shadow-sm">
+                        Shot {activeSlotIndex + 1} of 3
+                      </span>
+                    </div>
+
+                    {/* Camera Feed Viewport */}
+                    <div className="relative w-full aspect-video bg-black rounded-2xl md:rounded-[2rem] overflow-hidden shadow-lg border border-pink-100/50 flex items-center justify-center group/cam shadow-[#ff70ae]/5">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        onLoadedMetadata={(e) => {
+                          e.currentTarget.play().catch(err => console.error("Webcam playback error:", err));
+                        }}
+                        className="w-full h-full object-cover scale-x-[-1]"
+                      />
+
+                      {/* Align text pill top-center overlay */}
+                      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
+                        <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 text-[9px] md:text-xs font-bold text-white uppercase tracking-widest leading-none select-none">
+                          {isCountingDown ? "Hold still! 📸" : "Align your beautiful smile ✨"}
                         </div>
+                      </div>
 
-                        {/* Capture Button Bar */}
-                        <div className="absolute bottom-12 inset-x-0 flex flex-col items-center gap-4 z-20">
-                          <button
-                            onClick={handleCapturePhoto}
-                            className="relative w-24 h-24 flex items-center justify-center group"
-                          >
-                            <div className="absolute inset-0 rounded-full border-4 border-white/40 animate-ping group-active:animate-none" />
-                            <div className="relative w-20 h-20 rounded-full border-4 border-white p-2 transition-transform group-hover:scale-105 active:scale-90">
-                              <div className="w-full h-full bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.5)]" />
+                      {/* Interactive shutter release centered overlays */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+                        <button
+                          onClick={handleCapturePhoto}
+                          disabled={isCountingDown}
+                          className="relative w-14 h-14 rounded-full flex items-center justify-center bg-white/20 border border-white/50 hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md">
+                            <div className="w-10 h-10 rounded-full bg-[#ff70ae]/15 border border-[#ff70ae]/30 flex items-center justify-center">
+                              <div className="w-5 h-5 rounded-full bg-[#ff70ae]" />
                             </div>
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <img src={capturedPhoto!} alt="Captured" className="w-full h-full object-cover" />
-                        
-                        {/* Result Controls Bar */}
-                        <div className="absolute bottom-12 inset-x-0 px-4 flex flex-col gap-3 z-20">
-                          <div className="flex gap-4 mx-[16px] my-[12px]">
-                            <button
-                              disabled={isUploading}
-                              onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = capturedPhoto!;
-                                link.download = 'ami-birthday-memory.png';
-                                link.click();
-                                handleUploadToSupabase();
-                              }}
-                              className={`flex-1 h-12 px-[16px] text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-2xl transition-all active:scale-95 ${isUploading ? 'bg-pink-300 cursor-not-allowed' : 'bg-[#ff70ae] shadow-pink-500/20 hover:scale-[1.02]'}`}
-                            >
-                              {isUploading ? 'Uploading...' : uploadStatus === 'success' ? 'Saved! ✨' : 'Save Memory 💖'}
-                            </button>
-                            <button
-                              onClick={handleOpenCamera}
-                              disabled={isUploading}
-                              className="flex-1 h-12 px-[16px] bg-white/20 backdrop-blur-md text-white border border-white/40 rounded-2xl font-bold active:scale-95 transition-all hover:bg-white/30 flex items-center justify-center text-sm"
-                            >
-                              Retake 📸
-                            </button>
                           </div>
-                          
-                          {uploadStatus === 'error' && (
-                            <p className="text-[10px] text-white bg-red-500/50 backdrop-blur-md py-2 px-4 rounded-full text-center">
-                              Cloud save failed, but it's saved locally! 💾
-                            </p>
-                          )}
-                          {uploadStatus === 'success' && (
-                            <p className="text-[10px] text-white bg-green-500/50 backdrop-blur-md py-2 px-4 rounded-full text-center">
-                              Shared to our cloud memories ✨
-                            </p>
-                          )}
+                        </button>
+                      </div>
+
+                      {/* Shutter Countdown overlay */}
+                      {countdown !== null && (
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-30 select-none">
+                          <motion.div
+                            key={countdown}
+                            initial={{ scale: 0.3, opacity: 0 }}
+                            animate={{ scale: [0.3, 1.3, 1], opacity: [0, 1, 1] }}
+                            transition={{ duration: 0.55 }}
+                            className="text-7xl md:text-8xl font-black font-serif text-[#ff70ae] drop-shadow-[0_4px_16px_rgba(255,255,255,0.85)] italic"
+                          >
+                            {countdown}
+                          </motion.div>
                         </div>
-                      </>
-                    )}
+                      )}
+
+                      {/* Camera flash visual frame feedback */}
+                      {shutterFlash && (
+                        <div className="absolute inset-0 bg-white z-[90] pointer-events-none" />
+                      )}
+                    </div>
+
+                    {/* Result Slots Grid - Row of 3 interactive cards */}
+                    <div className="grid grid-cols-3 gap-3 md:gap-5 w-full">
+                      {[0, 1, 2].map((idx) => {
+                        const photo = capturedPhotos[idx];
+                        const isActive = activeSlotIndex === idx;
+                        return (
+                          <button
+                            key={idx}
+                            disabled={isCountingDown}
+                            onClick={() => {
+                              setActiveSlotIndex(idx);
+                            }}
+                            className={`aspect-[4/3] rounded-xl md:rounded-2xl border-2 overflow-hidden flex flex-col items-center justify-center relative transition-all duration-300 bg-gray-50 shadow-sm ${
+                              isActive
+                                ? 'border-[#ff70ae] bg-white ring-4 ring-pink-100/50 scale-[1.03] shadow-md z-10'
+                                : 'border-pink-50/50 bg-gray-50/60 hover:bg-white hover:border-[#ff70ae]/20 cursor-pointer'
+                            }`}
+                          >
+                            {photo ? (
+                              <div className="relative w-full h-full group">
+                                <img src={photo} alt={`Captured ${idx + 1}`} className="w-full h-full object-cover select-none" />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-[8px] md:text-xs text-white font-bold tracking-wider uppercase select-none">
+                                    Retake 📸
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center p-1 text-center select-none">
+                                <span className="text-[9px] md:text-xs font-semibold text-gray-400 capitalize whitespace-nowrap">
+                                  Result {idx + 1}
+                                </span>
+                              </div>
+                            )}
+
+                            {isActive && (
+                              <span className="absolute bottom-1 px-2 py-0.5 rounded-full bg-[#ff70ae] text-[6px] md:text-[8px] text-white font-extrabold uppercase tracking-wide">
+                                Active
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Footer Trigger CTA Button */}
+                    <div className="w-full pt-1">
+                      {capturedPhotos.every((p) => p !== null) ? (
+                        <motion.button
+                          initial={{ scale: 0.95, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileActive={{ scale: 0.99 }}
+                          onClick={async () => {
+                            await generateCompositeStrip(capturedPhotos as string[]);
+                          }}
+                          className="w-full py-3.5 bg-gradient-to-r from-[#ff70ae] to-[#ff5293] text-white rounded-2xl font-bold text-sm shadow-xl shadow-pink-200/50 flex items-center justify-center gap-2 hover:from-[#ff5a9e] hover:to-[#ff3d85] transition-all"
+                        >
+                          Create Photo Strip 💖
+                        </motion.button>
+                      ) : (
+                        <button
+                          disabled
+                          className="w-full py-3.5 bg-gray-200 text-gray-400 rounded-2xl font-bold text-sm select-none cursor-not-allowed"
+                        >
+                          Save
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </motion.div>
+
+                  {/* Screen 5: Vertical Photo Strip Result Popup Modal Dialog */}
+                  <AnimatePresence>
+                    {capturedPhoto && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto"
+                      >
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                          className="w-full max-w-2xl bg-white rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative border border-pink-100/20 max-h-[92vh] overflow-y-auto"
+                        >
+                          {/* Close button inside top corner of the strip mockup popup */}
+                          <button
+                            onClick={() => setCapturedPhoto(null)}
+                            className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-full transition-all active:scale-95 shadow-md z-30"
+                            aria-label="Close"
+                          >
+                            <X size={20} strokeWidth={2.5} />
+                          </button>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center justify-items-center">
+                            
+                            {/* Left Col: Renders the beautiful composite vertical Photo Strip mockup with Machine Slot Dispenser effect */}
+                            <div className="flex flex-col items-center justify-center relative w-full">
+                              {/* Classic Photo Dispenser Slot Mechanism Lid */}
+                              <div className="mb-4 text-center">
+                                <div className="inline-flex flex-col items-center">
+                                  {/* Inner subtle mechanical slot slit */}
+                                  <div className="w-48 h-3 bg-neutral-900 rounded-t-xl border-t border-b border-pink-200/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center relative overflow-hidden">
+                                    {/* Subtle glowing laser line resembling a high-tech photobooth slide */}
+                                    <div className="absolute inset-x-0 top-0.5 h-[1px] bg-pink-400 opacity-60 shadow-[0_0_4px_#ff70ae]" />
+                                  </div>
+                                  <span className="text-[9px] font-mono font-black uppercase tracking-widest text-[#8A5A68] mt-1 bg-pink-50/80 px-2 py-0.5 rounded border border-pink-100/30">
+                                    PHOTO DISPENSER 📸
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Dispenser roll out viewport container */}
+                              <div className="relative overflow-hidden rounded-2xl p-1 bg-gradient-to-b from-neutral-50 to-neutral-100/30 border border-neutral-200/20 shadow-sm">
+                                {/* Vertical conveyor rolling movement */}
+                                <motion.div
+                                  initial={{ y: -450, opacity: 0.3 }}
+                                  animate={{ y: 0, opacity: 1 }}
+                                  transition={{
+                                    type: "spring",
+                                    stiffness: 35,
+                                    damping: 14,
+                                    mass: 1.15,
+                                    delay: 0.2
+                                  }}
+                                  className="relative"
+                                >
+                                  {/* Light reflection glass shine over lay */}
+                                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/5 pointer-events-none rounded-xl z-10" />
+                                  
+                                  <img
+                                    src={capturedPhoto}
+                                    alt="Our Memories Strip"
+                                    className="max-h-[48vh] md:max-h-[60vh] aspect-[640/1600] object-contain rounded-xl shadow-2xl border-white border-[6px] md:border-8 bg-white"
+                                  />
+                                </motion.div>
+                              </div>
+                            </div>
+
+                            {/* Right Col: Details, Download & Upload Controls */}
+                            <div className="w-full flex flex-col justify-center space-y-6 select-none max-w-sm">
+                              <div className="text-center md:text-left space-y-2">
+                                <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50 px-3 py-1 rounded-full border border-pink-100/20">
+                                  Memory strip loaded
+                                </span>
+                                <h4 className="text-xl md:text-2xl font-serif text-[#4A2230] font-semibold">
+                                  Your Souvenir is Ready! 💖
+                                </h4>
+                                <p className="text-xs md:text-sm text-[#8A5A68]">
+                                  Download a high-resolution version of this photo strip or save it directly to our sweet live gallery album!
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col gap-3">
+                                <button
+                                  disabled={isUploading}
+                                  onClick={async () => {
+                                    const link = document.createElement('a');
+                                    link.href = capturedPhoto;
+                                    link.download = 'ami-birthday-strip.png';
+                                    link.click();
+                                    await handleUploadToSupabase();
+                                  }}
+                                  className={`w-full h-12 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-pink-200/50 transition-all active:scale-[0.97] text-sm md:text-base ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                >
+                                  {isUploading ? 'Uploading & Saving...' : uploadStatus === 'success' ? 'Saved & Shared! 🎉' : 'Save to Gallery 💖'}
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setCapturedPhotos([null, null, null]);
+                                    setCapturedPhoto(null);
+                                    setActiveSlotIndex(0);
+                                  }}
+                                  disabled={isUploading}
+                                  className="w-full h-12 bg-white text-[#ff70ae] border border-pink-200 rounded-2xl font-bold hover:bg-pink-50 transition-all active:scale-[0.97] flex items-center justify-center text-sm md:text-base"
+                                >
+                                  Retake 📸
+                                </button>
+                              </div>
+
+                              {/* Action messaging triggers */}
+                              {uploadStatus === 'error' && (
+                                <p className="text-[10px] text-red-500 bg-red-50 py-2.5 px-4 rounded-xl text-center border border-red-100">
+                                  Cloud save failed, but it's downloaded locally! 💾
+                                </p>
+                              )}
+                              {uploadStatus === 'success' && (
+                                <p className="text-[10px] text-green-600 bg-green-50 py-2.5 px-4 rounded-xl text-center border border-green-100 font-bold animate-pulse">
+                                  Perfect! Shared directly to our live gallery memory lane ✨
+                                </p>
+                              )}
+                            </div>
+
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
