@@ -1349,17 +1349,17 @@ export default function App() {
             For Ami ✨
           </span>
           <h1 className="text-3xl md:text-5xl lg:text-7xl font-serif leading-tight">
-            Someone planned a special birthday night for you.
+            Someone planned something special for your birthday.
           </h1>
           <p className="text-base md:text-lg text-[#8A5A68] font-light max-w-xs mx-auto leading-relaxed">
-            Open this invitation when you're ready for your special day 💕
+            A little surprise has been prepared just for you. Open it when you're ready. 💕
           </p>
           <button
             onClick={handleOpenInvitation}
             className="group relative h-12 px-[16px] mx-[16px] my-[12px] inline-flex items-center justify-center bg-[#ff70ae] text-white rounded-full font-medium transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#ff70ae]/20 overflow-hidden text-sm md:text-base"
           >
             <span className="relative z-10 flex items-center gap-2">
-              Open Invitation <Heart className="w-4 h-4 fill-current" />
+              Open Your Surprise 💗
             </span>
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
           </button>
@@ -1519,7 +1519,7 @@ export default function App() {
                 </div>
                 <div>
                   <p className="text-[9px] md:text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Time</p>
-                  <p className="font-semibold text-xs md:text-base text-[#4A2230]">10:00 AM</p>
+                  <p className="font-semibold text-xs md:text-base text-[#4A2230]">12:00</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-2 md:p-3 bg-white/50 rounded-xl md:rounded-2xl">
@@ -1533,7 +1533,7 @@ export default function App() {
               </div>
             </div>
 
-            <p className="text-xs md:text-sm text-[#8A5A68] italic">I already planned everything for us ❤️</p>
+            <p className="text-xs md:text-sm text-[#8A5A68] italic">Someone planned a special birthday day for you ❤️</p>
           </motion.div>
 
           {/* Dynamic Polaroid Slideshow Card (Right) */}
@@ -1800,7 +1800,7 @@ export default function App() {
           </div>
 
           {/* Polaroid Container - Horizontal Scroll on Mobile / Fixed Responsive Grid on Desktop in Portrait 2:3 Aspect ratio */}
-          <div className="flex lg:grid lg:grid-cols-3 gap-3 md:gap-4 lg:gap-5 xl:gap-6 w-full max-w-3xl xl:max-w-4xl px-4 overflow-x-auto lg:overflow-visible pb-3 lg:pb-0 select-none items-center pt-2 justify-start lg:justify-center snap-x scrollbar-none">
+          <div className="flex lg:grid lg:grid-cols-3 gap-4 md:gap-5 lg:gap-5 xl:gap-6 w-full max-w-3xl xl:max-w-4xl px-6 md:px-8 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 select-none items-center pt-2 justify-start lg:justify-center snap-x scrollbar-none">
             {[
               { id: 'ours-0', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%206.png', title: 'Perfect Days 🌸', subtitle: 'Warm Sunshine', rotate: 'lg:-rotate-2' },
               { id: 'ours-1', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%201.png', title: 'Cozy Chats ☕', subtitle: 'Pure Happiness', rotate: 'lg:rotate-1' },
@@ -1816,7 +1816,7 @@ export default function App() {
                 transition={{ delay: i * 0.04, duration: 0.4 }}
                 whileHover={{ y: -6, scale: 1.04 }}
                 onClick={() => setGalleryToast(`Beautiful moment: "${card.title}" 🥺💕`)}
-                className={`bg-white p-1.5 sm:p-2 lg:p-2.5 rounded-xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} h-[34vh] xs:h-[38vh] sm:h-[40vh] lg:h-[22vh] xl:h-[25vh] aspect-[2/3] w-auto shrink-0 snap-center mx-auto`}
+                className={`bg-white p-2 sm:p-2.5 lg:p-2.5 rounded-xl md:rounded-2xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} w-[62vw] xs:w-[58vw] sm:w-[45vw] md:w-[32vw] lg:w-auto h-auto lg:h-[25vh] xl:h-[28vh] aspect-[2/3] shrink-0 snap-center`}
               >
                 {/* Washi Tape Ribbon Effect */}
                 <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-3.5 md:w-16 md:h-4 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[5px] md:text-[6px] font-bold text-[#ff70ae]/70 tracking-wider">
@@ -1887,14 +1887,14 @@ export default function App() {
                     <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">A Little Note</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl md:text-4xl font-serif text-[#4A2230] leading-snug font-bold">
-                    Happy Birthday, Ami Sayang 💖
+                    Happy Birthday,<br />Ami Sayang 💗
                   </h2>
                 </div>
                 
                 {/* Note Content Text - Scrollable to fit all device heights and ratios perfectly */}
                 <div className="space-y-3 text-xs md:text-sm lg:text-base text-[#4A2230] font-medium leading-relaxed md:leading-loose md:max-h-[48vh] md:overflow-y-auto pr-1 md:pr-4 custom-scrollbar">
                   <p className="mt-1">
-                    I honestly don't know how to fit everything I want to say into just a few paragraphs.
+                    Honestly, I don't know how to fit everything i wanna say into just a few paragraphs.
                   </p>
                   <p className="mt-2">
                     Thank you for being my favorite person. Thank you for all the laughs, all the random conversations, all the little moments that make my days so much better.
