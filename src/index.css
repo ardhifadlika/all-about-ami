@@ -16,3 +16,31 @@
     @apply font-serif font-semibold;
   }
 }
+
+/* Custom scrollbar styling for romantic theme */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ffd6e7;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #ff70ae;
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #ffd6e7 transparent;
+}
+
+/* Hide scrollbar completely while maintaining scrolling action */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

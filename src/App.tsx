@@ -48,6 +48,26 @@ function MusicSlash({ className }: { className?: string }) {
   );
 }
 
+type StripColor = 'soft-pink' | 'pink' | 'blue' | 'black' | 'brown' | 'white';
+
+interface ColorOption {
+  id: StripColor;
+  name: string;
+  dotColor: string;
+  bgColor: string;
+  borderColor: string;
+  activeColor: string;
+}
+
+const COLOR_OPTIONS: ColorOption[] = [
+  { id: 'soft-pink', name: 'Soft Pink', dotColor: '#ffd2e1', bgColor: 'bg-[#fff0f4]', borderColor: 'border-[#ffccd7]', activeColor: 'ring-2 ring-pink-300 shadow-xs' },
+  { id: 'pink', name: 'Pink', dotColor: '#ff70ae', bgColor: 'bg-[#ffeaf3]', borderColor: 'border-[#ffaed1]', activeColor: 'ring-2 ring-pink-400 shadow-xs' },
+  { id: 'blue', name: 'Blue', dotColor: '#7cb1ff', bgColor: 'bg-[#ecf4ff]', borderColor: 'border-[#cbdfff]', activeColor: 'ring-2 ring-blue-300 shadow-xs' },
+  { id: 'black', name: 'Black', dotColor: '#1f2937', bgColor: 'bg-[#f3f4f6]', borderColor: 'border-[#cbd5e1]', activeColor: 'ring-2 ring-gray-600 shadow-xs' },
+  { id: 'brown', name: 'Brown', dotColor: '#a16a3f', bgColor: 'bg-[#faf6f0]', borderColor: 'border-[#e2d1bd]', activeColor: 'ring-2 ring-amber-700 shadow-xs' },
+  { id: 'white', name: 'White', dotColor: '#ffffff', bgColor: 'bg-[#ffffff]', borderColor: 'border-[#e4e5e7]', activeColor: 'ring-2 ring-gray-300 shadow-xs' },
+];
+
 export default function App() {
   const pageRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLIFrameElement>(null);
@@ -62,6 +82,7 @@ export default function App() {
   const [isOpening, setIsOpening] = useState(false);
   const [invitationOpened, setInvitationOpened] = useState(false);
   const [showSurprise, setShowSurprise] = useState(false);
+  const [currentView, setCurrentView] = useState<'landing' | 'photobooth'>('landing');
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
@@ -70,6 +91,7 @@ export default function App() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
   const [currentInviteImage, setCurrentInviteImage] = useState(0);
+  const [activeScheduleStep, setActiveScheduleStep] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -111,7 +133,6 @@ export default function App() {
     { id: 'invitation', label: 'Invitation' },
     { id: 'dresscode', label: 'Dresscode' },
     { id: 'schedule', label: "Today's Plan" },
-    { id: 'memories', label: 'Memories' },
     { id: 'image-section', label: 'Our Album' },
     { id: 'letter', label: 'A Little Note' },
     { id: 'surprise', label: 'Last Thing' },
@@ -133,39 +154,39 @@ export default function App() {
 
   const schedule = [
     { 
-      time: '10:00', 
-      title: 'Pickup my princess 🚗', 
-      desc: 'Dress comfortable, look pretty, and get ready for a full day of birthday magic built for you!', 
-      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/pickup.png',
-      icon: <Coffee className="w-5 h-5 text-[#ff70ae]" /> 
-    },
-    { 
-      time: '10:00 - 14:00', 
-      title: 'Flowers hunting 🌸', 
-      desc: 'Finding the absolute prettiest, freshest blooms to make your birthday room look stunning.', 
-      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/flowers.png',
-      icon: <Flower className="w-5 h-5 text-[#ff70ae]" /> 
-    },
-    { 
-      time: '14:00 - 19:00', 
-      title: 'Misc to do ✨', 
-      desc: 'Fun spontaneous activities, light treats, and capturing unforgettable snapshots of us.', 
-      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/misc%20to%20do.png',
+      time: '12:00', 
+      title: 'Pickup My Princess 🚗', 
+      desc: 'The best part of today starts when I see you. 💕', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Pick%20up.png',
       icon: <Heart className="w-5 h-5 text-[#ff70ae]" /> 
     },
     { 
-      time: '19:00 - 20:00', 
-      title: 'Dinner Time 🍽️', 
-      desc: '(Resto still secret) A luxurious, cozy, and private live-cooking dining date together!', 
-      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/1st%20Resto.png',
+      time: '13:00', 
+      title: 'Photobooth 📸✨', 
+      desc: "Let's capture the first smiles of your birthday before our adventure begins.", 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Photobooth.png',
+      icon: <CameraIcon className="w-5 h-5 text-[#ff70ae]" /> 
+    },
+    { 
+      time: '14:00', 
+      title: 'Lunch Date 🤫💖', 
+      desc: "A little birthday surprise I've been keeping just for you.", 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Lunch.png',
       icon: <Utensils className="w-5 h-5 text-[#ff70ae]" /> 
     },
     { 
-      time: '20:00 - End', 
-      title: 'Open The Gifts 🎁', 
-      desc: 'Unwrapping birthday surprises, making sweet midnight wishes, and finishing your magical day.', 
-      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Gifts.png',
+      time: '16:00', 
+      title: 'Open The Gifts 🎀✨', 
+      desc: "I've been waiting for this moment for so long... surprise time.", 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Gifts%20(1).png',
       icon: <Gift className="w-5 h-5 text-[#ff70ae]" /> 
+    },
+    { 
+      time: '17:00 - end', 
+      title: 'Just Us ❤️', 
+      desc: 'No plans, no rush. Just us, good music, and little moments together.', 
+      image: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/schedule/Strolling%20around.png',
+      icon: <Flower className="w-5 h-5 text-[#ff70ae]" /> 
     },
   ];
 
@@ -223,24 +244,31 @@ export default function App() {
   };
 
   const handleSurprise = () => {
-    if (showSurprise) {
+    if (currentView === 'photobooth') {
       stopCamera();
       setShowCamera(false);
       setCapturedPhoto(null);
       setCameraError(null);
+      setCurrentView('landing');
+      setShowSurprise(false);
+    } else {
+      setShowSurprise(true);
+      setCurrentView('photobooth');
     }
-    setShowSurprise(prev => !prev);
   };
 
   const handleCameraBack = () => {
     stopCamera();
-    setCapturedPhotos([null, null, null]);
+    setCapturedPhotos(Array(photoMode).fill(null));
     setCapturedPhoto(null);
     setShowCamera(false);
     setShowSurprise(false);
+    setCurrentView('landing');
+    setMobilePhotoboothStep('capture');
   };
 
   const handleOpenCamera = async () => {
+    setMobilePhotoboothStep('capture');
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -268,7 +296,17 @@ export default function App() {
     }
   };
 
+  const [photoMode, setPhotoMode] = useState<3 | 6>(3);
   const [capturedPhotos, setCapturedPhotos] = useState<(string | null)[]>([null, null, null]);
+  const [stripDesign, setStripDesign] = useState<StripColor>('soft-pink');
+  const [mobilePhotoboothStep, setMobilePhotoboothStep] = useState<'capture' | 'preview'>('capture');
+
+  const handlePhotoModeChange = (mode: 3 | 6) => {
+    setPhotoMode(mode);
+    setCapturedPhotos(Array(mode).fill(null));
+    setActiveSlotIndex(0);
+  };
+
   const [activeSlotIndex, setActiveSlotIndex] = useState<number>(0);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCountingDown, setIsCountingDown] = useState<boolean>(false);
@@ -306,6 +344,8 @@ export default function App() {
     const nextEmptyIndex = updated.findIndex((item) => item === null);
     if (nextEmptyIndex !== -1) {
       setActiveSlotIndex(nextEmptyIndex);
+    } else {
+      setMobilePhotoboothStep('preview');
     }
   };
 
@@ -364,62 +404,93 @@ export default function App() {
   };
 
   const generateCompositeStrip = async (photos: string[]) => {
-    if (photos.length < 3 || !canvasRef.current) return;
+    const isDouble = photoMode === 6;
+    if (photos.length < (isDouble ? 6 : 3) || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Sweet vertical photobooth aspect ratio: 640x1600
-    canvas.width = 640;
+    // Canvas size
+    canvas.width = isDouble ? 1280 : 640;
     canvas.height = 1600;
 
     // Clear canvas
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw three horizontal 3:2 bounding boxes with vertical offsets
-    for (let i = 0; i < 3; i++) {
-      const yOffset = 80 + i * (340 + 40); // Y: 80, 460, 840
-      
-      // Load taken shot
-      try {
-        const img = await loadImage(photos[i]);
-        ctx.save();
-        // Inner clipping bounding box
-        ctx.beginPath();
-        ctx.roundRect(52, yOffset + 12, 536, 316, 16);
-        ctx.clip();
-        
-        // Draw centered cover cropping
-        const imgAspect = img.width / img.height;
-        const targetAspect = 536 / 316;
-        let dx, dy, dw, dh;
-        
-        if (imgAspect > targetAspect) {
-          dh = img.height;
-          dw = dh * targetAspect;
-          dx = (img.width - dw) / 2;
-          dy = 0;
-        } else {
-          dw = img.width;
-          dh = dw / targetAspect;
-          dx = 0;
-          dy = (img.height - dh) / 2;
+    // Helper to draw a vertical column of 3 photos
+    const drawColumn = async (colPhotos: string[], startX: number) => {
+      for (let i = 0; i < 3; i++) {
+        const yOffset = 80 + i * (340 + 40); // Y: 80, 460, 840
+        try {
+          const img = await loadImage(colPhotos[i]);
+          ctx.save();
+          // Inner clipping block
+          ctx.beginPath();
+          ctx.roundRect(startX + 52, yOffset + 12, 536, 316, 16);
+          ctx.clip();
+          
+          // Cover crop
+          const imgAspect = img.width / img.height;
+          const targetAspect = 536 / 316;
+          let dx, dy, dw, dh;
+          if (imgAspect > targetAspect) {
+            dh = img.height;
+            dw = dh * targetAspect;
+            dx = (img.width - dw) / 2;
+            dy = 0;
+          } else {
+            dw = img.width;
+            dh = dw / targetAspect;
+            dx = 0;
+            dy = (img.height - dh) / 2;
+          }
+          ctx.drawImage(img, dx, dy, dw, dh, startX + 52, yOffset + 12, 536, 316);
+          ctx.restore();
+        } catch (err) {
+          console.error("Column drawing error:", err);
         }
-
-        ctx.drawImage(img, dx, dy, dw, dh, 52, yOffset + 12, 536, 316);
-        ctx.restore();
-      } catch (err) {
-        console.error("Slot drawing error:", err);
       }
+    };
+
+    if (isDouble) {
+      // Draw first column (photos 0, 1, 2)
+      await drawColumn(photos.slice(0, 3), 0);
+      // Draw second column (photos 3, 4, 5)
+      await drawColumn(photos.slice(3, 6), 640);
+    } else {
+      await drawColumn(photos, 0);
     }
 
-    // Overlay the beautiful custom Frame.png on top of everything!
+    // Overlay the beautiful custom design Frame on top of everything!
     try {
-      const frameImg = await loadImage('https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Frame.png');
-      ctx.drawImage(frameImg, 0, 0, 640, 1600);
+      const frame1Strips: Record<StripColor, string> = {
+        'soft-pink': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Soft%20Pink.png',
+        'pink': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Pink.png',
+        'blue': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Blue.png',
+        'black': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Black.png',
+        'brown': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Brown.png',
+        'white': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20White.png',
+      };
+
+      const frame2Strips: Record<StripColor, string> = {
+        'soft-pink': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Soft%20Pink.png',
+        'pink': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Pink.png',
+        'blue': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Blue.png',
+        'black': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Black.png',
+        'brown': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Brown.png',
+        'white': 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20White.png',
+      };
+
+      const frameUrl = isDouble ? frame2Strips[stripDesign] : frame1Strips[stripDesign];
+      const frameImg = await loadImage(frameUrl);
+      if (isDouble) {
+        ctx.drawImage(frameImg, 0, 0, 1280, 1600);
+      } else {
+        ctx.drawImage(frameImg, 0, 0, 640, 1600);
+      }
     } catch (e) {
-      console.error("Error overlaying Frame.png:", e);
+      console.error("Error overlaying custom Frame:", e);
     }
 
     const resultUrl = canvas.toDataURL('image/png');
@@ -509,11 +580,656 @@ export default function App() {
     audioRef.current.src = `${baseUrl}?autoplay=${isPlaying ? 1 : 0}&loop=1&playlist=WCce-3XMdJs&enablejsapi=1`;
   }, [isPlaying]);
 
+  const renderLiveFilmStrip = (widthClass: string = "w-36 sm:w-40 md:w-44") => {
+    return photoMode === 3 ? (
+      /* Single 3-Shot Strip HTML preview */
+      <div className={`relative ${widthClass} aspect-[640/1600] bg-white rounded-xl shadow-xl border border-pink-100/30 overflow-hidden transform rotate-1 hover:rotate-0 transition-transform duration-300`}>
+        <div className="absolute inset-0 z-0">
+          {/* Slot 1 */}
+          <div style={{ top: '5.75%', left: '8.125%', width: '83.75%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[0] ? (
+              <img src={capturedPhotos[0]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[9px] font-mono text-pink-300 uppercase tracking-widest animate-pulse">Smile 📸</span>
+            )}
+          </div>
+          {/* Slot 2 */}
+          <div style={{ top: '29.5%', left: '8.125%', width: '83.75%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[1] ? (
+              <img src={capturedPhotos[1]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[9px] font-mono text-pink-300 uppercase tracking-widest">Shot 2</span>
+            )}
+          </div>
+          {/* Slot 3 */}
+          <div style={{ top: '53.25%', left: '8.125%', width: '83.75%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[2] ? (
+              <img src={capturedPhotos[2]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[9px] font-mono text-pink-300 uppercase tracking-widest">Shot 3</span>
+            )}
+          </div>
+        </div>
+        <img 
+          src={
+            stripDesign === 'soft-pink' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Soft%20Pink.png' :
+            stripDesign === 'pink' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Pink.png' :
+            stripDesign === 'blue' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Blue.png' :
+            stripDesign === 'black' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Black.png' :
+            stripDesign === 'brown' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20Brown.png' :
+            'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%201%20strip%20-%20White.png'
+          } 
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none select-none" 
+        />
+      </div>
+    ) : (
+      /* Double 6-Shot Strip HTML preview */
+      <div className={`relative ${widthClass} aspect-[1280/1600] bg-white rounded-xl shadow-xl border border-pink-100/30 overflow-hidden transform rotate-1 hover:rotate-0 transition-transform duration-300`}>
+        <div className="absolute inset-0 z-0">
+          {/* Left strip (Photos 0, 1, 2) */}
+          <div style={{ top: '5.75%', left: '4.0625%', width: '41.875%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[0] ? (
+              <img src={capturedPhotos[0]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[8px] font-mono text-pink-300 uppercase tracking-widest animate-pulse">Shot 1</span>
+            )}
+          </div>
+          <div style={{ top: '29.5%', left: '4.0625%', width: '41.875%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[1] ? (
+              <img src={capturedPhotos[1]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[8px] font-mono text-pink-300 uppercase tracking-widest">Shot 2</span>
+            )}
+          </div>
+          <div style={{ top: '53.25%', left: '4.0625%', width: '41.875%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[2] ? (
+              <img src={capturedPhotos[2]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[8px] font-mono text-pink-300 uppercase tracking-widest">Shot 3</span>
+            )}
+          </div>
+
+          {/* Right strip (Photos 3, 4, 5) */}
+          <div style={{ top: '5.75%', left: '54.0625%', width: '41.875%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[3] ? (
+              <img src={capturedPhotos[3]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[8px] font-mono text-pink-300 uppercase tracking-widest animate-pulse">Shot 4</span>
+            )}
+          </div>
+          <div style={{ top: '29.5%', left: '54.0625%', width: '41.875%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[4] ? (
+              <img src={capturedPhotos[4]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[8px] font-mono text-pink-300 uppercase tracking-widest">Shot 5</span>
+            )}
+          </div>
+          <div style={{ top: '53.25%', left: '54.0625%', width: '41.875%', height: '19.75%' }} className="absolute bg-[#fffbfc] overflow-hidden flex items-center justify-center">
+            {capturedPhotos[5] ? (
+              <img src={capturedPhotos[5]} className="w-full h-full object-cover select-none animate-fade-in" />
+            ) : (
+              <span className="text-[8px] font-mono text-pink-300 uppercase tracking-widest">Shot 6</span>
+            )}
+          </div>
+        </div>
+        <img 
+          src={
+            stripDesign === 'soft-pink' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Soft%20Pink.png' :
+            stripDesign === 'pink' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Pink.png' :
+            stripDesign === 'blue' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Blue.png' :
+            stripDesign === 'black' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Black.png' :
+            stripDesign === 'brown' ? 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20Brown.png' :
+            'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/Frame/Frame%202%20Strip%20-%20White.png'
+          } 
+          className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none select-none" 
+        />
+      </div>
+    );
+  };
+
+  if (currentView === 'photobooth') {
+    return (
+      <div className="min-h-[100dvh] bg-[#fff5f8] text-[#4A2230] relative select-none w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
+        <canvas ref={canvasRef} className="hidden" />
+
+        {/* Intro Popup screen (displays when camera is NOT open yet) */}
+        {!showCamera ? (
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="w-full max-w-md bg-white rounded-[2rem] p-8 md:p-10 shadow-2xl relative border border-pink-100/30 flex flex-col items-center text-center space-y-6 md:space-y-8 select-none m-4"
+          >
+            {/* Close button in top-right of the modal box */}
+            <button
+              onClick={handleSurprise}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-full transition-all active:scale-90 shadow-sm z-30 cursor-pointer"
+              aria-label="Close"
+            >
+              <X size={16} strokeWidth={2.5} />
+            </button>
+
+            <div className="w-20 h-20 md:w-24 md:h-24 bg-[#fff5f8] rounded-full flex items-center justify-center text-[#ff70ae] shadow-inner mb-1 border border-pink-100">
+              <CameraIcon size={36} />
+            </div>
+
+            <div className="space-y-3.5">
+              <h3 className="text-2xl md:text-3xl font-serif text-[#4A2230] font-semibold">Show your cute face 🥺</h3>
+              <p className="text-xs md:text-sm text-[#8A5A68] leading-relaxed max-w-xs mx-auto">
+                I want to see your beautiful reaction to this little website I made for you... Keep this sweet moment remembered forever ✨
+              </p>
+            </div>
+
+            {cameraError && (
+              <p className="text-xs text-red-500 bg-red-50 p-3 rounded-xl border border-red-100 w-full">
+                {cameraError}
+              </p>
+            )}
+
+            <button
+              onClick={handleOpenCamera}
+              className="w-full h-12 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-full font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-pink-200/50 active:scale-95 text-sm md:text-base cursor-pointer"
+            >
+              Open Camera 📸
+            </button>
+          </motion.div>
+        ) : (
+          /* Actual Camera Feed and Style Panel Page */
+          <div className="w-full max-w-5xl lg:max-w-6xl mx-auto z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.12fr_0.88fr] gap-6 lg:gap-8 items-stretch w-full">
+              
+              {/* Left Column: Camera, Trigger, & Settings Slots / Capture Panel */}
+              <div className={`${mobilePhotoboothStep === 'capture' ? 'flex' : 'hidden lg:flex'} flex-col bg-white border border-pink-100/50 rounded-[2rem] p-4 sm:p-5 md:p-8 shadow-xl justify-between gap-4 w-full`}>
+                
+                {/* Top Status and Back-Close Action Bar */}
+                <div className="flex items-center justify-between shrink-0 mb-1">
+                  <button
+                    onClick={handleCameraBack}
+                    className="inline-flex items-center gap-1.5 bg-[#fff0f4] hover:bg-[#ffe0ea] border border-[#ffccd7] text-[#ff70ae] px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    <X size={14} strokeWidth={3} />
+                    <span>Close</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center bg-[#fff0f4] border border-[#ffccd7]/30 text-[#ff70ae] px-4 py-1.5 rounded-full text-xs font-bold shadow-2xs select-none">
+                      Shot {activeSlotIndex + 1} of {photoMode}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Layout Selector choice: Visible only on mobile capture */}
+                <div className="w-full lg:hidden bg-[#fff0f4]/40 p-3 rounded-2xl border border-pink-100 flex flex-col items-center gap-2">
+                  <span className="text-[11px] sm:text-xs font-bold text-[#ff70ae] uppercase tracking-wide block text-center">
+                    Select Size 📐
+                  </span>
+                  <div className="inline-flex bg-[#fff5f8] p-1 rounded-full border border-pink-100/80 w-full">
+                    <button
+                      type="button"
+                      onClick={() => handlePhotoModeChange(3)}
+                      className={`flex-1 py-1.5 px-3 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        photoMode === 3 
+                          ? 'bg-[#ff70ae] text-white shadow-sm' 
+                          : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                      }`}
+                    >
+                      🎞️ 3-Shot Strip
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePhotoModeChange(6)}
+                      className={`flex-1 py-1.5 px-3 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                        photoMode === 6 
+                          ? 'bg-[#ff70ae] text-white shadow-sm' 
+                          : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                      }`}
+                    >
+                      ✨ 6-Shot Strip
+                    </button>
+                  </div>
+                </div>
+
+                {/* Camera Feed Viewport */}
+                <div className="relative w-full aspect-[4/3] sm:aspect-video bg-neutral-900 rounded-2xl sm:rounded-[1.5rem] overflow-hidden shadow-inner border border-pink-100 flex items-center justify-center group/cam shadow-[#ff70ae]/5">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedMetadata={(e) => {
+                      e.currentTarget.play().catch(err => console.error("Webcam playback error:", err));
+                    }}
+                    className="w-full h-full object-cover scale-x-[-1]"
+                  />
+
+                  {/* Align text pill top-center overlay */}
+                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
+                    <div className="bg-black/50 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 text-[9px] md:text-xs font-bold text-white uppercase tracking-widest leading-none select-none">
+                      {isCountingDown ? "Hold still! 📸" : "Align your beautiful smile ✨"}
+                    </div>
+                  </div>
+
+                  {/* Camera Shutter Countdown Overlay */}
+                  {countdown !== null && (
+                    <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center z-30 select-none">
+                      <motion.div
+                        key={countdown}
+                        initial={{ scale: 0.3, opacity: 0 }}
+                        animate={{ scale: [0.3, 1.3, 1], opacity: [0, 1, 1] }}
+                        transition={{ duration: 0.55 }}
+                        className="text-7xl md:text-8xl font-black font-serif text-[#ff70ae] drop-shadow-[0_4px_16px_rgba(255,255,255,0.85)] italic"
+                      >
+                        {countdown}
+                      </motion.div>
+                    </div>
+                  )}
+
+                  {/* Camera flash visual frame feedback */}
+                  {shutterFlash && (
+                    <div className="absolute inset-0 bg-white z-[90] pointer-events-none" />
+                  )}
+                </div>
+
+                {/* Prominent Take Picture Button */}
+                <button
+                  type="button"
+                  onClick={handleCapturePhoto}
+                  disabled={isCountingDown}
+                  className="w-full py-3.5 sm:py-4 bg-white hover:bg-pink-50/20 border-2 border-[#ff70ae] text-[#ff70ae] disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shadow-2xs"
+                >
+                  <Camera size={18} strokeWidth={2.5} />
+                  <span>Take Picture</span>
+                </button>
+
+                {/* Result Slots Matrix */}
+                <div className="space-y-1.5 w-full">
+                  <span className="text-[10px] font-bold text-[#8A5A68] uppercase tracking-wider block text-center mb-1 select-none">
+                    Snap slots panel 🎬
+                  </span>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full">
+                    {capturedPhotos.map((photo, idx) => {
+                      const isActive = activeSlotIndex === idx;
+                      return (
+                        <button
+                          key={idx}
+                          disabled={isCountingDown}
+                          onClick={() => {
+                            setActiveSlotIndex(idx);
+                          }}
+                          className={`aspect-[4/3] rounded-xl sm:rounded-2xl border-2 overflow-hidden flex flex-col items-center justify-center relative transition-all duration-300 bg-[#fbfbfb] shadow-2xs ${
+                            isActive
+                              ? 'border-[#ff70ae] bg-pink-50/25 ring-4 ring-pink-100/50 scale-[1.01] z-10 shadow-sm'
+                              : 'border-pink-50/40 hover:bg-white hover:border-[#ff70ae]/30 cursor-pointer'
+                          }`}
+                        >
+                          {photo ? (
+                            <div className="relative w-full h-full group">
+                              <img src={photo} alt={`Captured ${idx + 1}`} className="w-full h-full object-cover select-none" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <span className="text-[9px] text-white font-extrabold tracking-wider uppercase select-none">
+                                  Retake 📸
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-1 text-center select-none">
+                              <span className="text-[10px] sm:text-xs font-bold text-gray-400 capitalize whitespace-nowrap">
+                                Shot {idx + 1}
+                              </span>
+                            </div>
+                          )}
+
+                          {isActive && (
+                            <span className="absolute bottom-1 px-1.5 py-0.5 rounded-full bg-[#ff70ae] text-[6px] md:text-[8px] text-white font-black uppercase tracking-wide leading-none">
+                              Active
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Proceed to stylist trigger on mobile (always rendered, but color disabled/gray unless ALL pictures captured) */}
+                <div className="lg:hidden w-full pt-1">
+                  <button
+                    type="button"
+                    disabled={!capturedPhotos.every(p => p !== null)}
+                    onClick={() => {
+                      if (capturedPhotos.every(p => p !== null)) {
+                        setMobilePhotoboothStep('preview');
+                      }
+                    }}
+                    className={`w-full py-3.5 sm:py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all text-sm sm:text-base shadow-sm ${
+                      capturedPhotos.every(p => p !== null)
+                        ? "bg-[#ff70ae] hover:bg-[#ff5a9e] text-white cursor-pointer active:scale-95"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                    }`}
+                  >
+                    Go to Style & Preview 🎨 ✨
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column: Real-time Live Film Strip Mockup Preview / Style Panel */}
+              <div className={`${mobilePhotoboothStep === 'preview' ? 'flex' : 'hidden lg:flex'} flex-col bg-gradient-to-r from-[#ffeef2] to-[#ffdce7] rounded-[2rem] border border-[#ffd2e1] overflow-hidden shadow-xl self-start lg:sticky lg:top-4 mt-2 lg:mt-0 w-full`}>
+                
+                {/* Mobile-Only Step Header */}
+                <div className="lg:hidden w-full flex items-center justify-between p-4 sm:p-5 border-b border-[#ffaed1]/25 select-none text-[#4A2230]">
+                  <button
+                    onClick={() => setMobilePhotoboothStep('capture')}
+                    className="inline-flex items-center gap-1.5 bg-white hover:bg-pink-100/50 border border-[#ffccd7] text-[#ff70ae] px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    <ChevronLeft size={14} strokeWidth={3} />
+                    <span>Retake</span>
+                  </button>
+                  <div className="text-right flex flex-col items-end">
+                    <span className="text-[12px] font-serif font-black text-[#5c3e47] tracking-wide uppercase">Image Preview</span>
+                    <span className="text-[8px] text-[#805060]/70 font-sans uppercase tracking-widest font-black">Style Frame ✨</span>
+                  </div>
+                </div>
+
+                {/* Desktop-Only Premium Header Banner */}
+                <div className="hidden lg:flex p-5 text-center flex-col items-center justify-center select-none text-[#4A2230] border-b border-[#ffaed1]/25">
+                  <h3 className="font-serif text-[#4A2230] text-xl sm:text-2xl font-bold tracking-wider uppercase">Image Preview</h3>
+                  <p className="text-[10px] text-[#805060]/75 uppercase font-sans font-bold tracking-widest mt-1">See your beautiful image here</p>
+                </div>
+
+                {/* White Container Body workspace */}
+                <div className="bg-white rounded-b-[2rem] p-4 sm:p-6 md:p-8 flex flex-col justify-between flex-grow gap-4 sm:gap-6">
+                  
+                  {/* Select Size Choices widget: Visible ONLY on desktop (lg) inside right styled column */}
+                  <div className="hidden lg:block w-full space-y-2 bg-[#fff8fa] p-3 rounded-2xl border border-pink-100/40">
+                    <div className="space-y-1.5 w-full flex flex-col items-center">
+                      <span className="text-[10px] font-bold text-[#8A5A68] uppercase tracking-wider block text-center">
+                        Select Size 📐
+                      </span>
+                      <div className="inline-flex bg-pink-100/20 p-1 rounded-full border border-pink-200/10 w-full">
+                        <button
+                          type="button"
+                          onClick={() => handlePhotoModeChange(3)}
+                          className={`flex-1 py-1 px-3 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            photoMode === 3 
+                              ? 'bg-[#ff70ae] text-white shadow-2xs scale-[1.01]' 
+                              : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                          }`}
+                        >
+                          🎞️ 3-Shot Strip
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePhotoModeChange(6)}
+                          className={`flex-1 py-1 px-3 rounded-full text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                            photoMode === 6 
+                              ? 'bg-[#ff70ae] text-white shadow-2xs scale-[1.01]' 
+                              : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                          }`}
+                        >
+                          ✨ 6-Shot Strip
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Frame Color Horizontal scrolling container */}
+                  <div className="w-full lg:hidden p-3.5 bg-[#fff8fa] border border-pink-100/40 rounded-2xl flex flex-col items-center gap-2">
+                    <span className="text-[11px] sm:text-xs font-bold text-[#ff70ae] uppercase tracking-wider block text-center select-none">
+                      Select Color 🌈
+                    </span>
+                    <div className="flex gap-2.5 overflow-x-auto pb-1.5 scrollbar-none snap-x px-1 w-full justify-start sm:justify-center">
+                      {COLOR_OPTIONS.map((opt) => {
+                        const isSelected = stripDesign === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setStripDesign(opt.id || 'soft-pink')}
+                            className={`snap-center min-w-[76px] py-1.5 px-2 rounded-xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer select-none ${
+                              isSelected
+                                ? `${opt.bgColor} ${opt.borderColor} ${opt.activeColor} scale-[1.03] shadow-xs`
+                                : 'bg-white border-pink-100/40 hover:border-pink-300'
+                            }`}
+                          >
+                            <span 
+                              className="w-4 h-4 rounded-full border border-black/10 shadow-inner shrink-0"
+                              style={{ backgroundColor: opt.dotColor }}
+                            />
+                            <span className="text-[9px] font-semibold text-center text-[#5c3e47] tracking-tight leading-none truncate w-full">
+                              {opt.id === 'soft-pink' ? 'Soft Pink' : opt.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Side-by-side Layout on Desktop: Live Film Strip Preview + Vertical Color Picker sidebar */}
+                  <div className="hidden lg:grid grid-cols-[80px_1fr] gap-6 items-center justify-center py-2 flex-grow">
+                    
+                    {/* Vertical Color Customizer Sidebar on Left */}
+                    <div className="flex flex-col items-center gap-2.5 p-3 bg-[#fff8fa] rounded-2xl border border-pink-50 shadow-2xs w-full self-center justify-center select-none">
+                      <span className="text-[8px] font-extrabold text-[#8A5A68] uppercase tracking-widest text-center leading-none mb-1">
+                        Select Color 🎨
+                      </span>
+                      <div className="flex flex-col gap-2 w-full">
+                        {COLOR_OPTIONS.map((opt) => {
+                          const isSelected = stripDesign === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setStripDesign(opt.id)}
+                              className={`w-full py-2 px-1 rounded-xl border transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer group ${
+                                isSelected
+                                  ? `${opt.bgColor} ${opt.borderColor} ${opt.activeColor} scale-[1.04]`
+                                  : 'bg-white border-pink-100 hover:border-pink-300'
+                              }`}
+                            >
+                              <span 
+                                className="w-4 h-4 rounded-full border border-black/10 shadow-inner shrink-0 transition-transform group-hover:scale-105"
+                                style={{ backgroundColor: opt.dotColor }}
+                              />
+                              <span className="text-[8px] font-black uppercase text-center text-[#5c3e47] tracking-tight leading-none truncate w-full">
+                                {opt.id === 'soft-pink' ? 'Soft' : opt.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Live render of Film Strip on Right */}
+                    <div className="flex justify-center items-center h-full">
+                      {renderLiveFilmStrip("w-36 sm:w-40 md:w-44 lg:w-48")}
+                    </div>
+
+                  </div>
+
+                  {/* Live Preview Rendered AT THE BOTTOM on Mobile */}
+                  <div className="lg:hidden w-full flex flex-col items-center justify-center py-4 bg-[#fff8fa]/30 rounded-2xl border border-pink-50/50 mt-1 select-none">
+                    {renderLiveFilmStrip("w-38 sm:w-42")}
+                  </div>
+
+                  {/* Footer Trigger CTA Button */}
+                  <div className="w-full mt-3 pt-3 border-t border-pink-50 select-none">
+                    {capturedPhotos.every((p) => p !== null) ? (
+                      <div className="space-y-2">
+                        <motion.button
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                          type="button"
+                          onClick={async () => {
+                            await generateCompositeStrip(capturedPhotos as string[]);
+                          }}
+                          className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-[#ff70ae] to-[#ff5293] text-white rounded-2xl font-bold text-sm sm:text-base shadow-lg shadow-pink-200/40 flex items-center justify-center gap-2 hover:from-[#ff5a9e] hover:to-[#ff3d85] transition-all cursor-pointer"
+                        >
+                          Create Photo Strip 💖
+                        </motion.button>
+                        <button
+                          type="button"
+                          onClick={() => setMobilePhotoboothStep('capture')}
+                          className="lg:hidden w-full py-2.5 bg-white border border-[#ffd2e1] text-[#ff70ae] rounded-xl font-bold text-xs hover:bg-pink-50/20 transition-colors active:scale-95"
+                        >
+                          📸 Retake a Photo
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <button
+                          disabled
+                          className="w-full py-3.5 sm:py-4 bg-gray-100 text-gray-400 rounded-2xl font-bold text-xs sm:text-sm select-none cursor-not-allowed text-center"
+                        >
+                          Capture {capturedPhotos.filter(p => p !== null).length}/{photoMode} Photos to Save ✨
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setMobilePhotoboothStep('capture')}
+                          className="lg:hidden w-full py-2.5 bg-white border border-[#ffd2e1] text-[#ff70ae] rounded-xl font-bold text-xs"
+                        >
+                          📸 Capture Remaining Shots
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+              </div>
+              
+            </div>
+          </div>
+        )}
+
+        {/* Screen 5: Vertical Photo Strip Result Popup Modal inside photobooth page */}
+        <AnimatePresence>
+          {capturedPhoto && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full max-w-2xl bg-white rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative border border-pink-100/20 max-h-[92vh] overflow-y-auto"
+              >
+                {/* Close button inside top corner of the strip mockup popup */}
+                <button
+                  onClick={() => setCapturedPhoto(null)}
+                  className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-full transition-all active:scale-95 shadow-md z-30 cursor-pointer"
+                  aria-label="Close"
+                >
+                  <X size={20} strokeWidth={2.5} />
+                </button>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 items-center justify-items-center">
+                  
+                  {/* Left Col: Renders composite vertical Photo Strip mockup */}
+                  <div className="flex flex-col items-center justify-center relative w-full">
+                    <div className="mb-4 text-center">
+                      <div className="inline-flex flex-col items-center">
+                        <div className={`${photoMode === 6 ? 'w-80' : 'w-48'} h-3 bg-neutral-900 rounded-t-xl border-t border-b border-pink-200/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center relative overflow-hidden transition-all duration-500`}>
+                          <div className="absolute inset-x-0 top-0.5 h-[1px] bg-pink-400 opacity-60 shadow-[0_0_4px_#ff70ae]" />
+                        </div>
+                        <span className="text-[9px] font-mono font-black uppercase tracking-widest text-[#8A5A68] mt-1 bg-pink-50/80 px-2 py-0.5 rounded border border-pink-100/30">
+                          PHOTO DISPENSER 📸
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-2xl p-1 bg-gradient-to-b from-neutral-50 to-neutral-100/30 border border-neutral-200/20 shadow-sm">
+                      <motion.div
+                        initial={{ y: -450, opacity: 0.3 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 35,
+                          damping: 14,
+                          mass: 1.15,
+                          delay: 0.2
+                        }}
+                        className="relative"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/5 pointer-events-none rounded-xl z-10" />
+                        <img
+                          src={capturedPhoto}
+                          alt="Our Memories Strip"
+                          className={`max-h-[48vh] md:max-h-[60vh] ${photoMode === 6 ? 'aspect-[1280/1600]' : 'aspect-[640/1600]'} object-contain rounded-xl shadow-2xl border-white border-[6px] md:border-8 bg-white`}
+                        />
+                      </motion.div>
+                    </div>
+                  </div>
+
+                  {/* Right Col: Details, Download & Upload Controls */}
+                  <div className="w-full flex flex-col justify-center space-y-6 select-none max-w-sm">
+                    <div className="text-center md:text-left space-y-2">
+                      <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50 px-3 py-1 rounded-full border border-pink-100/20">
+                        Memory strip loaded
+                      </span>
+                      <h4 className="text-xl md:text-2xl font-serif text-[#4A2230] font-semibold">
+                        Your Souvenir is Ready! 💖
+                      </h4>
+                      <p className="text-xs md:text-sm text-[#8A5A68]">
+                        Download a high-resolution version of this photo strip or save it directly to our sweet live gallery album!
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                      <button
+                        disabled={isUploading}
+                        onClick={async () => {
+                          const link = document.createElement('a');
+                          link.href = capturedPhoto;
+                          link.download = 'ami-birthday-strip.png';
+                          link.click();
+                          await handleUploadToSupabase();
+                        }}
+                        className={`w-full h-12 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-pink-200/50 transition-all active:scale-[0.97] text-sm md:text-base cursor-pointer ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      >
+                        {isUploading ? 'Uploading & Saving...' : uploadStatus === 'success' ? 'Saved & Shared! 🎉' : 'Save to Gallery 💖'}
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setCapturedPhotos([null, null, null]);
+                          setCapturedPhoto(null);
+                          setActiveSlotIndex(0);
+                        }}
+                        disabled={isUploading}
+                        className="w-full h-12 bg-white text-[#ff70ae] border border-pink-200 rounded-2xl font-bold hover:bg-pink-50 transition-all active:scale-[0.97] flex items-center justify-center text-sm md:text-base cursor-pointer"
+                      >
+                        Retake 📸
+                      </button>
+                    </div>
+
+                    {uploadStatus === 'error' && (
+                      <p className="text-[10px] text-red-500 bg-red-50 py-2.5 px-4 rounded-xl text-center border border-red-100">
+                        Cloud save failed, but it's downloaded locally! 💾
+                      </p>
+                    )}
+                    {uploadStatus === 'success' && (
+                      <p className="text-[10px] text-green-600 bg-green-50 py-2.5 px-4 rounded-xl text-center border border-[#ff70ae]/30 font-bold animate-pulse">
+                        Perfect! Shared directly to our live gallery memory lane ✨
+                      </p>
+                    )}
+                  </div>
+
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={pageRef}
       onScroll={handlePageScroll}
-      className={`h-[100dvh] snap-y snap-mandatory scroll-smooth bg-[#fff5f8] text-[#4A2230] overflow-x-hidden relative selection:bg-[#ff70ae]/30 ${!invitationOpened ? 'overflow-y-hidden' : 'overflow-y-scroll'}`}
+      className={`h-[100dvh] md:snap-y md:snap-mandatory scroll-smooth bg-[#fff5f8] text-[#4A2230] overflow-x-hidden relative selection:bg-[#ff70ae]/30 ${!invitationOpened ? 'overflow-y-hidden' : 'overflow-y-scroll'}`}
     >
       {/* Background Parallax Elements */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -538,7 +1254,7 @@ export default function App() {
 
       {/* Navigation - Genie Effect Sidebar - Hidden on Mobile */}
       <AnimatePresence>
-        {invitationOpened && activeSection !== 'hero' && (
+        {invitationOpened && activeSection !== 'hero' && !showSurprise && (
           <motion.nav 
             initial={{ 
               opacity: 0, 
@@ -622,7 +1338,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* HERO SECTION */}
-      <section id="hero" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center px-6 text-center overflow-hidden">
+      <section id="hero" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex flex-col items-center justify-center px-6 text-center overflow-hidden py-12 md:py-0">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -659,7 +1375,7 @@ export default function App() {
             >
               <div className="relative flex flex-col items-center">
                 {/* Heart Bucket with Water Filling Effect */}
-                <div className="relative w-48 h-48 md:w-64 md:h-64">
+                <div className="relative w-36 h-36 sm:w-48 sm:h-48 md:w-64 md:h-64">
                   <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-2xl">
                     <defs>
                       <clipPath id="heart-mask">
@@ -763,7 +1479,7 @@ export default function App() {
                 <motion.p 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-12 text-[#ff70ae] font-serif text-2xl text-center font-semibold italic"
+                  className="mt-6 md:mt-12 text-[#ff70ae] font-serif text-xl md:text-2xl text-center font-semibold italic"
                 >
                   Creating magic for you...
                 </motion.p>
@@ -774,67 +1490,67 @@ export default function App() {
       </section>
 
       {/* INVITATION SECTION */}
-      <section id="invitation" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-4 md:px-6">
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center justify-center">
+      <section id="invitation" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex items-center justify-center px-4 md:px-6 overflow-hidden py-12 md:py-0">
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-center justify-center">
           {/* Information Card (Left) */}
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            className="w-full bg-white/60 backdrop-blur-2xl p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] border border-white/40 shadow-2xl space-y-4 md:space-y-6 flex flex-col justify-between h-full"
+            className="w-full bg-white/60 backdrop-blur-2xl p-4 sm:p-6 md:p-10 rounded-[1.75rem] md:rounded-[3rem] border border-white/40 shadow-xl md:shadow-2xl space-y-3.5 md:space-y-6 flex flex-col justify-between order-2 md:order-1"
           >
-            <div className="space-y-3.5 md:space-y-5">
-              <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Invitation</span>
-              <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Ami's 24th Birthday</h2>
+            <div className="space-y-2 md:space-y-5">
+              <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Invitation</span>
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif text-[#4A2230] leading-tight md:leading-snug">Ami's 24th Birthday</h2>
             </div>
             
-            <div className="space-y-3 md:space-y-4">
-              <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
-                <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
-                  <Calendar size={20} />
+            <div className="space-y-2 md:space-y-4">
+              <div className="flex items-center gap-3 p-2 md:p-3 bg-white/50 rounded-xl md:rounded-2xl">
+                <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg md:rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Date</p>
-                  <p className="font-semibold text-sm md:text-base text-[#4A2230]">8 June 2026</p>
+                  <p className="text-[9px] md:text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Date</p>
+                  <p className="font-semibold text-xs md:text-base text-[#4A2230]">8 June 2026</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
-                <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
-                  <Clock size={20} />
+              <div className="flex items-center gap-3 p-2 md:p-3 bg-white/50 rounded-xl md:rounded-2xl">
+                <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg md:rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
+                  <Clock className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Time</p>
-                  <p className="font-semibold text-sm md:text-base text-[#4A2230]">10:00 AM</p>
+                  <p className="text-[9px] md:text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Time</p>
+                  <p className="font-semibold text-xs md:text-base text-[#4A2230]">10:00 AM</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 p-3 bg-white/50 rounded-2xl">
-                <div className="w-10 h-10 shrink-0 rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
-                  <MapPin size={20} />
+              <div className="flex items-center gap-3 p-2 md:p-3 bg-white/50 rounded-xl md:rounded-2xl">
+                <div className="w-8 h-8 md:w-10 md:h-10 shrink-0 rounded-lg md:rounded-xl bg-[#ff70ae]/10 flex items-center justify-center text-[#ff70ae]">
+                  <MapPin className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
                 <div>
-                  <p className="text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Location</p>
-                  <p className="font-semibold text-sm md:text-base text-[#4A2230]">Secret Place ✨</p>
+                  <p className="text-[9px] md:text-[10px] text-[#8A5A68] uppercase tracking-wider font-semibold">Location</p>
+                  <p className="font-semibold text-xs md:text-base text-[#4A2230]">Secret Place ✨</p>
                 </div>
               </div>
             </div>
 
-            <p className="text-sm text-[#8A5A68] italic">I already planned everything for us ❤️</p>
+            <p className="text-xs md:text-sm text-[#8A5A68] italic">I already planned everything for us ❤️</p>
           </motion.div>
 
           {/* Dynamic Polaroid Slideshow Card (Right) */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            className="relative flex justify-center items-center"
+            className="relative flex justify-center items-center order-1 md:order-2"
           >
             {/* Hanging Tape stickers or ribbon */}
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-6 bg-[#ff70ae]/20 border border-[#ff70ae]/30 rounded-sm rotate-2 z-20 flex items-center justify-center text-[8px] font-bold text-[#ff70ae] tracking-widest shadow-sm">
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-20 h-5 md:w-24 md:h-6 bg-[#ff70ae]/20 border border-[#ff70ae]/30 rounded-sm rotate-2 z-20 flex items-center justify-center text-[7px] md:text-[8px] font-bold text-[#ff70ae] tracking-widest shadow-sm">
               PRETTY GIRL
             </div>
 
             {/* Polaroid Base Frame */}
-            <div className="bg-white p-4 pb-12 rounded-[2rem] shadow-2xl border border-pink-100/30 max-w-[280px] md:max-w-xs w-full rotate-[-2deg] transition-transform hover:rotate-0 duration-500 relative group">
+            <div className="bg-white p-2.5 pb-8 md:p-4 md:pb-12 rounded-xl md:rounded-[2rem] shadow-lg md:shadow-2xl border border-pink-100/30 max-w-[170px] sm:max-w-[210px] md:max-w-xs w-full rotate-[-2deg] transition-transform hover:rotate-0 duration-500 relative group">
               {/* Image slideshow window */}
-              <div className="aspect-square w-full rounded-xl overflow-hidden bg-pink-50 relative border border-pink-100">
+              <div className="aspect-square w-full rounded-lg md:rounded-xl overflow-hidden bg-pink-50 relative border border-pink-100">
                 <AnimatePresence mode="wait">
                   <motion.img
                     key={currentInviteImage}
@@ -849,20 +1565,20 @@ export default function App() {
                 </AnimatePresence>
                 
                 {/* Visual Indicator Dots */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                <div className="absolute bottom-2 md:bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-20">
                   {invitationImages.map((_, idx) => (
                     <div 
                       key={idx} 
-                      className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentInviteImage ? 'w-4 bg-[#ff70ae]' : 'w-1.5 bg-white/60'}`} 
+                      className={`h-1 md:h-1.5 rounded-full transition-all duration-300 ${idx === currentInviteImage ? 'w-3 md:w-4 bg-[#ff70ae]' : 'w-1 md:w-1.5 bg-white/60'}`} 
                     />
                   ))}
                 </div>
               </div>
 
               {/* Polaroid Footer caption */}
-              <div className="mt-4 text-center">
-                <p className="font-serif italic text-lg text-[#ff70ae] leading-none shrink-0 font-semibold">Little Ami 🌸</p>
-                <p className="text-[10px] text-[#8A5A68] tracking-widest uppercase mt-1">Our birthday girl tonight</p>
+              <div className="mt-2 md:mt-4 text-center">
+                <p className="font-serif italic text-sm md:text-lg text-[#ff70ae] leading-none shrink-0 font-semibold">Little Ami 🌸</p>
+                <p className="text-[8px] md:text-[10px] text-[#8A5A68] tracking-widest uppercase mt-0.5 md:mt-1">Our birthday girl tonight</p>
               </div>
             </div>
           </motion.div>
@@ -870,18 +1586,20 @@ export default function App() {
       </section>
 
       {/* DRESSCODE SECTION */}
-      <section id="dresscode" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-6 overflow-hidden py-4">
-        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 items-center">
+      <section id="dresscode" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex items-center justify-center px-6 overflow-hidden py-12 md:py-0">
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-12 items-center">
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            className="space-y-4 md:space-y-6 text-center md:text-left order-2 md:order-1"
+            className="order-2 md:order-1 w-full"
           >
-            <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">Dresscode</span>
-            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Pink and Jeans 💖</h2>
-            <p className="text-sm md:text-lg text-[#8A5A68] leading-relaxed">
-              Let's match! Wear your favorite pink top paired with stylish jeans for our special date.
-            </p>
+            <div className="bg-white/60 backdrop-blur-2xl p-5 sm:p-6 md:p-10 rounded-[1.75rem] md:rounded-[3rem] border border-white/40 shadow-xl md:shadow-2xl text-center md:text-left space-y-3.5 md:space-y-6 max-w-md mx-auto md:mx-0">
+              <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-100/30 px-3 py-1 rounded-full border border-pink-200/5">Dresscode 👗</span>
+              <h2 className="text-2xl md:text-4xl lg:text-5xl font-serif text-[#4A2230] leading-snug font-bold">Pink and Jeans 💖</h2>
+              <p className="text-xs sm:text-sm md:text-base text-[#8A5A68] leading-relaxed">
+                Let's match! Wear your favorite pink top paired with stylish jeans for our special date. Perfect for beautiful photos together!
+              </p>
+            </div>
           </motion.div>
           
           <motion.div 
@@ -889,148 +1607,224 @@ export default function App() {
             whileInView={{ opacity: 1, scale: 1 }}
             className="relative order-1 md:order-2"
           >
-            <div className="aspect-[4/5] max-w-[200px] md:max-w-none mx-auto rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden border-2 md:border-8 border-white shadow-2xl bg-white/40">
+            <div className="aspect-[4/5] max-w-[150px] sm:max-w-[200px] md:max-w-none mx-auto rounded-xl md:rounded-[2.5rem] overflow-hidden border-2 md:border-8 border-white shadow-lg md:shadow-2xl bg-white/40">
               <img src={dresscodeImage} alt="Dresscode" className="w-full h-full object-cover" />
             </div>
-            <div className="absolute -bottom-2 -right-1 md:-bottom-6 md:-right-6 bg-white p-2 md:p-6 rounded-xl md:rounded-3xl shadow-xl border border-pink-50">
-              <p className="font-serif italic text-[#ff70ae] text-[10px] md:text-lg">Perfect Pair ✨</p>
+            <div className="absolute -bottom-1 -right-1 md:-bottom-6 md:-right-6 bg-white p-1.5 md:p-5 rounded-lg md:rounded-3xl shadow-md md:shadow-xl border border-pink-50">
+              <p className="font-serif italic text-[#ff70ae] text-[9px] sm:text-xs md:text-lg leading-none">Perfect Pair ✨</p>
             </div>
           </motion.div>
         </div>
       </section>
 
       {/* SCHEDULE SECTION */}
-      <section id="schedule" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-4 md:px-6 py-6 md:py-10">
-        <div className="w-full max-w-2xl space-y-4 md:space-y-8 select-none">
-          <div className="text-center space-y-3.5 md:space-y-4">
-            <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-100/20">Today's Plan</span>
-            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Here's our little birthday schedule ✨</h2>
+      <section id="schedule" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex items-center justify-center px-4 md:px-6 overflow-hidden py-12 md:py-0">
+        <div className="w-full max-w-6xl space-y-4 lg:space-y-8 select-none">
+          <div className="text-center space-y-1 md:space-y-3">
+            <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-100/20">Today's Journey</span>
+            <h2 className="text-xl md:text-4xl lg:text-5xl font-serif text-[#4A2230] leading-snug">Our Beautiful Roadmap ✨</h2>
           </div>
           
-          <div className="space-y-2 md:space-y-4 max-h-[60vh] md:max-h-none overflow-y-auto pr-1">
-            {schedule.map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 15 }}
+          {/* MOBILE & TABLET LAYOUT: Vertical list connecting with dashed line styled exactly like the design mockup */}
+          <div className="block lg:hidden w-full max-w-sm mx-auto relative px-4 pb-4">
+            {/* The dashed line running down the center of the left time capsules */}
+            <div className="absolute left-[54px] top-4 bottom-4 w-[2px] border-l-2 border-dashed border-[#ff70ae] pointer-events-none z-0" />
+            
+            <div className="space-y-4 relative z-10 w-full">
+              {schedule.map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.4 }}
+                  viewport={{ once: true }}
+                  className="relative flex gap-3.5 items-center justify-start w-full"
+                >
+                  {/* Capsule/oval time badge EXACTLY like design mockup */}
+                  <div className="w-[76px] h-9 shrink-0 rounded-full bg-white border border-[#ff70ae]/80 shadow-[0_2px_8px_rgba(255,112,174,0.12)] flex items-center justify-center font-sans font-black text-[#4A2230] text-[11px] sm:text-xs z-10 select-none">
+                    <span>{item.time.split(' ')[0]}</span>
+                  </div>
+
+                  {/* White rounded Step Card EXACTLY like design mockup */}
+                  <div className="flex-1 min-w-0 bg-white rounded-3xl border border-pink-100 p-3 shadow-[0_4px_20px_rgba(255,112,174,0.06)] flex items-center gap-3 transition-transform duration-300 hover:scale-[1.01]">
+                    {/* Image with 1:1 Aspect Ratio (Square) */}
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 aspect-square rounded-[1.25rem] overflow-hidden bg-pink-50 border border-pink-100/30">
+                      <img src={item.image} alt={item.title} className="w-full h-full object-cover select-none" />
+                    </div>
+
+                    {/* Left aligned title and subtext */}
+                    <div className="flex-1 flex flex-col justify-center text-left min-w-0">
+                      {/* Headline */}
+                      <h3 className="font-bold text-xs sm:text-[14px] text-[#4A2230] leading-tight font-sans truncate">
+                        {item.title}
+                      </h3>
+                      {/* Subtext */}
+                      <p className="text-[10px] sm:text-[11px] text-[#8A5A68] leading-tight font-sans font-medium mt-1 line-clamp-2">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* DESKTOP LAYOUT: 3 items in Row 1, 2 items in Row 2, connected with beautiful dashed timeline */}
+          <div className="hidden lg:grid grid-cols-6 gap-x-6 gap-y-8 relative w-full px-4 max-w-5xl mx-auto">
+            
+            {/* Row 1 Connector: Center of Card 1 to Center of Card 3 */}
+            <div className="absolute top-[68px] lg:top-[76px] xl:top-[84px] left-[16.6%] right-[16.6%] h-[2px] border-t-2 border-dashed border-[#ff70ae]/30 pointer-events-none z-0" />
+            
+            {/* Curve Road: Winding connection from Step 3 down to Step 4 */}
+            <div className="absolute right-[16.6%] left-[33.3%] top-[68px] lg:top-[76px] xl:top-[84px] bottom-[68px] lg:bottom-[76px] xl:bottom-[84px] border-r-2 border-b-2 border-dashed border-[#ff70ae]/20 rounded-br-[3rem] pointer-events-none z-0" />
+
+            {/* Row 2 Connector: Center of Card 4 to Center of Card 5 */}
+            <div className="absolute bottom-[68px] lg:bottom-[76px] xl:bottom-[84px] left-[33.3%] right-[33.3%] h-[2px] border-t-2 border-dashed border-[#ff70ae]/30 pointer-events-none z-0" />
+
+            {/* Row 1 Cards (idx 0 to 2, stepNumber 1 to 3, colspan-2 each) */}
+            {schedule.slice(0, 3).map((item, i) => (
+              <motion.div 
+                key={i} 
+                className="col-span-2 relative z-10"
+                initial={{ opacity: 0, y: 25 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08, duration: 0.4 }}
-                className="flex gap-3 md:gap-6 p-3 md:p-4 bg-white/40 backdrop-blur-md rounded-[1.2rem] md:rounded-3xl border border-white/20 items-center group cursor-default transition-all duration-300 hover:bg-white/75 hover:border-[#ff70ae]/30 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl hover:shadow-[#ff70ae]/5"
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
               >
-                {/* Image item thumbnail */}
-                <div className="w-14 h-14 md:w-20 md:h-20 shrink-0 rounded-xl md:rounded-[1.25rem] bg-white border border-[#ff70ae]/15 overflow-hidden shadow-sm group-hover:scale-105 transition-transform duration-300 relative flex items-center justify-center">
-                  <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                </div>
-
-                <div className="flex-1 min-w-0 space-y-0.5 md:space-y-1">
-                  <div className="flex justify-between items-center gap-2">
-                    <h3 className="font-bold text-sm md:text-lg text-[#4A2230] truncate group-hover:text-[#ff70ae] transition-colors">{item.title}</h3>
-                    <span className="text-[9px] md:text-sm font-semibold text-[#ff70ae] shrink-0 bg-[#fff5f8] px-2.5 py-0.5 rounded-full border border-pink-100/20">{item.time}</span>
+                <div className="bg-white/45 hover:bg-white/80 backdrop-blur-md rounded-[1.75rem] p-4 pt-5 pb-3.5 border border-pink-100/50 hover:border-[#ff70ae]/40 flex flex-col items-center text-center transition-all duration-400 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(255,112,174,0.08)] relative group h-full">
+                  {/* Step Badge */}
+                  <div className="absolute -top-3 left-6 bg-[#ff70ae] text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono tracking-widest shadow-md shadow-[#ff70ae]/15">
+                    STEP 0{i + 1}
                   </div>
-                  <p className="text-[10px] md:text-sm text-[#8A5A68] leading-relaxed line-clamp-2">{item.desc}</p>
+
+                  {/* 1:1 Aspect Ratio Image Container */}
+                  <div className="w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 aspect-square rounded-2xl overflow-hidden bg-white border border-[#ff70ae]/10 shadow-sm relative group-hover:scale-105 transition-transform duration-300 mb-3.5 flex-shrink-0">
+                    <img src={item.image} alt={item.title} className="w-full h-full object-cover select-none" />
+                    {/* Time overlay badge */}
+                    <div className="absolute bottom-1.5 right-1.5 bg-white/95 backdrop-blur-sm shadow-md px-2 py-0.5 rounded-full text-[9px] font-bold text-[#ff70ae] border border-pink-50 font-mono">
+                      {item.time}
+                    </div>
+                  </div>
+
+                  {/* Content details */}
+                  <div className="space-y-1 w-full flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span className="p-0.5 rounded-full text-[#ff70ae] group-hover:scale-110 transition-transform">
+                          {item.icon}
+                        </span>
+                        <h3 className="font-bold text-sm lg:text-base text-[#4A2230] group-hover:text-[#ff70ae] transition-colors leading-snug">
+                          {item.title}
+                        </h3>
+                      </div>
+                      <p className="text-[10px] lg:text-xs text-[#8A5A68] leading-normal px-1 font-light">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}
-          </div>
-        </div>
-      </section>
 
-      {/* MEMORIES SECTION */}
-      <section id="memories" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center px-4 md:px-6 overflow-hidden py-4">
-        <div className="w-full max-w-5xl text-center space-y-4 md:space-y-8 select-none">
-          <div className="space-y-3.5 md:space-y-4">
-            <span className="text-xs font-bold tracking-widest text-[#ff70ae] uppercase bg-pink-50/50 px-3 py-1.5 rounded-full border border-pink-100/20">Memories</span>
-            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Tiny moments that mean everything.</h2>
-          </div>
-
-          {/* 3 Horizontal Video Frames */}
-          <div className="grid grid-cols-3 gap-3 md:gap-8 max-w-4xl mx-auto w-full items-center justify-center pt-2">
-            {[
-              { id: 1, title: 'Cute Hugs 🧸', desc: 'Cozy moments in our safe place.', rotate: '-rotate-2 hover:rotate-0' },
-              { id: 2, title: 'Your Smile 🌸', desc: 'Chasing sweet pastel pink skies.', rotate: 'rotate-1 hover:rotate-0' },
-              { id: 3, title: 'Date Nights 🍰', desc: 'Sipping coffee, laughing forever.', rotate: 'rotate-3 hover:rotate-0' }
-            ].map((vid) => (
-              <motion.div
-                key={vid.id}
-                whileHover={{ y: -8, scale: 1.02 }}
-                className={`relative bg-black rounded-2xl md:rounded-[2rem] overflow-hidden aspect-[9/16] border-[3px] md:border-[6px] border-white shadow-xl flex flex-col justify-between p-2 md:p-3 cursor-default transition-all duration-300 ${vid.rotate}`}
+            {/* Row 2 Cards with centered layout spacer col-span-1 */}
+            <div className="col-span-1" />
+            {schedule.slice(3, 5).map((item, i) => (
+              <motion.div 
+                key={i + 3} 
+                className="col-span-2 relative z-10"
+                initial={{ opacity: 0, y: 25 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
               >
-                {/* Vintage overlay texture */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.4))] pointer-events-none z-10" />
-                <div className="absolute top-2 left-2 flex items-center gap-1 z-20">
-                  <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-red-500 animate-ping" />
-                  <span className="text-[6px] md:text-[10px] font-mono text-red-500 font-bold">REC</span>
-                </div>
-                
-                {/* Visual grid overlay to represent retro camera */}
-                <div className="absolute inset-x-2 inset-y-8 border border-white/5 rounded-lg pointer-events-none z-10" />
-
-                {/* Translucent Play container */}
-                <div className="flex-1 flex flex-col items-center justify-center space-y-1.5 z-10">
-                  <div className="w-8 h-8 md:w-14 md:h-14 bg-white/10 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/20 animate-pulse">
-                    <Play size={16} className="translate-x-[1px] md:scale-125 text-white" fill="currentColor" />
+                <div className="bg-white/45 hover:bg-white/80 backdrop-blur-md rounded-[1.75rem] p-4 pt-5 pb-3.5 border border-pink-100/50 hover:border-[#ff70ae]/40 flex flex-col items-center text-center transition-all duration-400 hover:scale-[1.02] hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(255,112,174,0.08)] relative group h-full">
+                  {/* Step Badge */}
+                  <div className="absolute -top-3 left-6 bg-[#ff70ae] text-white px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono tracking-widest shadow-md shadow-[#ff70ae]/15">
+                    STEP 0{i + 4}
                   </div>
-                  <span className="text-[5px] md:text-[10px] font-mono text-white/40 tracking-widest uppercase">30 FPS</span>
-                </div>
 
-                {/* Subtitle / film sticker area */}
-                <div className="z-10 bg-white/10 backdrop-blur-sm p-1 md:p-2.5 rounded-lg border border-white/10 text-left">
-                  <p className="font-semibold text-[7px] md:text-xs text-white leading-none">{vid.title}</p>
-                  <p className="text-[6px] md:text-[10px] text-white/70 line-clamp-1 mt-0.5">{vid.desc}</p>
+                  {/* 1:1 Aspect Ratio Image Container */}
+                  <div className="w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 aspect-square rounded-2xl overflow-hidden bg-white border border-[#ff70ae]/10 shadow-sm relative group-hover:scale-105 transition-transform duration-300 mb-3.5 flex-shrink-0">
+                    <img src={item.image} alt={item.title} className="w-full h-full object-cover select-none" />
+                    {/* Time overlay badge */}
+                    <div className="absolute bottom-1.5 right-1.5 bg-white/95 backdrop-blur-sm shadow-md px-2 py-0.5 rounded-full text-[9px] font-bold text-[#ff70ae] border border-pink-50 font-mono">
+                      {item.time}
+                    </div>
+                  </div>
+
+                  {/* Content details */}
+                  <div className="space-y-1 w-full flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-center gap-1.5 mb-1">
+                        <span className="p-0.5 rounded-full text-[#ff70ae] group-hover:scale-110 transition-transform">
+                          {item.icon}
+                        </span>
+                        <h3 className="font-bold text-sm lg:text-base text-[#4A2230] group-hover:text-[#ff70ae] transition-colors leading-snug">
+                          {item.title}
+                        </h3>
+                      </div>
+                      <p className="text-[10px] lg:text-xs text-[#8A5A68] leading-normal px-1 font-light">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))}
+            <div className="col-span-1" />
+
           </div>
         </div>
       </section>
 
       {/* IMAGE SECTION */}
-      <section id="image-section" className="relative z-10 h-[100dvh] snap-start flex flex-col items-center justify-center overflow-hidden px-4 py-4">
+      <section id="image-section" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex flex-col items-center justify-center overflow-hidden px-4 py-12 md:py-4">
         <motion.div
           style={{
             scale: 1 + imageSectionProgress * 0.05,
             y: imageSectionProgress * -15
           }}
-          className="w-full max-w-5xl flex flex-col items-center justify-center gap-4 md:gap-6 h-full"
+          className="w-full max-w-5xl flex flex-col items-center justify-center gap-2 sm:gap-3 lg:gap-4 min-h-full md:h-full"
         >
           {/* Header */}
-          <div className="text-center space-y-3.5 md:space-y-4 px-4 select-none">
+          <div className="text-center space-y-1.5 md:space-y-2 px-4 select-none">
             <div>
-              <span className="text-[10px] md:text-xs font-bold tracking-[0.2em] text-[#ff70ae] uppercase bg-pink-50/80 px-4 py-1.5 rounded-full border border-pink-100/30 shadow-sm">
+              <span className="text-[9px] md:text-xs font-bold tracking-[0.2em] text-[#ff70ae] uppercase bg-pink-50/80 px-4 py-1 rounded-full border border-pink-100/30 shadow-sm">
                 Mini album of us
               </span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Our Album of Love</h2>
-            <p className="text-[10px] md:text-sm text-[#8A5A68] max-w-md mx-auto">
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif text-[#4A2230] leading-snug font-bold">Our Album of Love</h2>
+            <p className="text-[9px] md:text-xs lg:text-[13px] text-[#8A5A68] max-w-md mx-auto leading-normal">
               Every sweet moment shared, hand in hand. Just waiting for our cute pictures to fill these frames tonight! ✨
             </p>
           </div>
 
-          {/* Polaroid 3x2 Grid */}
-          <div className="grid grid-cols-3 gap-2.5 md:gap-5 w-full max-w-4xl px-2 overflow-y-auto max-h-[60vh] md:max-h-none select-none items-center pt-2">
+          {/* Polaroid Container - Horizontal Scroll on Mobile / Fixed Responsive Grid on Desktop in Portrait 2:3 Aspect ratio */}
+          <div className="flex lg:grid lg:grid-cols-3 gap-3 md:gap-4 lg:gap-5 xl:gap-6 w-full max-w-3xl xl:max-w-4xl px-4 overflow-x-auto lg:overflow-visible pb-3 lg:pb-0 select-none items-center pt-2 justify-start lg:justify-center snap-x scrollbar-none">
             {[
-              { id: 'ours-0', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%206.png', title: 'Perfect Days 🌸', subtitle: 'Warm Sunshine', rotate: 'md:-rotate-2' },
-              { id: 'ours-1', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%201.png', title: 'Cozy Chats ☕', subtitle: 'Pure Happiness', rotate: 'md:rotate-1' },
-              { id: 'ours-2', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%202.png', title: 'Lovely Gaze 👀', subtitle: 'My Whole World', rotate: 'md:-rotate-1' },
-              { id: 'ours-3', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%203.png', title: 'Warm Hugs 🧸', subtitle: 'Safest Place', rotate: 'md:rotate-2' },
-              { id: 'ours-4', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%204.png', title: 'Sweet Laughs 😄', subtitle: 'Infinite Joy', rotate: 'md:-rotate-2' },
-              { id: 'ours-5', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%205.png', title: 'Together Always ♾️', subtitle: 'My Special One', rotate: 'md:rotate-1' },
+              { id: 'ours-0', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%206.png', title: 'Perfect Days 🌸', subtitle: 'Warm Sunshine', rotate: 'lg:-rotate-2' },
+              { id: 'ours-1', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%201.png', title: 'Cozy Chats ☕', subtitle: 'Pure Happiness', rotate: 'lg:rotate-1' },
+              { id: 'ours-2', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%202.png', title: 'Lovely Gaze 👀', subtitle: 'My Whole World', rotate: 'lg:-rotate-1' },
+              { id: 'ours-3', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%203.png', title: 'Warm Hugs 🧸', subtitle: 'Safest Place', rotate: 'lg:rotate-2' },
+              { id: 'ours-4', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%204.png', title: 'Sweet Laughs 😄', subtitle: 'Infinite Joy', rotate: 'lg:-rotate-2' },
+              { id: 'ours-5', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%205.png', title: 'Together Always ♾️', subtitle: 'My Special One', rotate: 'lg:rotate-1' },
             ].map((card, i) => (
               <motion.div
                 key={card.id}
                 initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: (i % 3) * 0.05, duration: 0.4 }}
-                whileHover={{ y: -4, scale: 1.02 }}
+                transition={{ delay: i * 0.04, duration: 0.4 }}
+                whileHover={{ y: -6, scale: 1.04 }}
                 onClick={() => setGalleryToast(`Beautiful moment: "${card.title}" 🥺💕`)}
-                className={`bg-white p-2 md:p-3 rounded-xl md:rounded-2xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} max-w-[120px] md:max-w-none mx-auto w-full`}
+                className={`bg-white p-1.5 sm:p-2 lg:p-2.5 rounded-xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} h-[34vh] xs:h-[38vh] sm:h-[40vh] lg:h-[22vh] xl:h-[25vh] aspect-[2/3] w-auto shrink-0 snap-center mx-auto`}
               >
                 {/* Washi Tape Ribbon Effect */}
-                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-3.5 md:w-16 md:h-5 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[5px] md:text-[7px] font-bold text-[#ff70ae]/70 tracking-wider">
+                <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-3.5 md:w-16 md:h-4 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[5px] md:text-[6px] font-bold text-[#ff70ae]/70 tracking-wider">
                   LOVELY
                 </div>
 
                 {/* Inner Image Slot */}
-                <div className="aspect-square w-full rounded-lg md:rounded-xl overflow-hidden border border-pink-100 bg-pink-50 relative flex flex-col items-center justify-center text-center">
+                <div className="w-full h-full rounded-lg md:rounded-xl overflow-hidden border border-pink-100 bg-pink-50 relative flex flex-col items-center justify-center text-center">
                   <img src={card.src} alt={card.title} className="w-full h-full object-cover" />
                 </div>
               </motion.div>
@@ -1055,41 +1849,110 @@ export default function App() {
       </section>
 
       {/* LETTER SECTION */}
-      <section id="letter" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-6 py-4 lg:py-0 overflow-hidden">
-        <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-16 items-center">
-          <div className="order-2 lg:order-1 space-y-4 md:space-y-8 text-center lg:text-left">
-            <div className="space-y-3.5 md:space-y-5">
-              <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">A Little Note</span>
-              <h2 className="text-3xl md:text-5xl font-serif text-[#4A2230] leading-snug">Happy Birthday, Ami Sayang 💖</h2>
-            </div>
+      <section id="letter" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex items-center justify-center px-6 py-12 md:py-0 overflow-hidden">
+        <div className="w-full max-w-2xl mx-auto flex items-center justify-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, type: "spring", bounce: 0.2 }}
+            whileHover={{ y: -8, scale: 1.01 }}
+            className="w-full md:max-h-[85vh] flex flex-col relative bg-gradient-to-br from-white via-[#fffefd] to-[#fffbfc] rounded-[1.75rem] md:rounded-[3rem] p-4 sm:p-5 md:p-10 border border-pink-100/80 shadow-[0_15px_45px_rgba(255,112,174,0.06)] hover:shadow-[0_25px_60px_rgba(255,112,174,0.18)] hover:border-[#ff70ae]/40 transition-all duration-500 text-left select-none overflow-hidden group"
+          >
+            {/* Subtle vintage envelope style background textures */}
+            <div className="absolute inset-0 bg-[radial-gradient(#ffd5e5_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.14] pointer-events-none" />
             
-            <div className="space-y-3 md:space-y-6 text-sm md:text-xl text-[#6D4552] font-light leading-relaxed">
-              <p>Thank you for always being my safest place, my favorite person, and the prettiest part of my days.</p>
-              <p>I hope this birthday becomes one of the happiest memories for you.</p>
-              <p>And tonight, I just want to spend every little moment with you ❤️</p>
+            {/* Interactive Love Stamp in top right corner on desktop */}
+            <div className="absolute top-6 right-6 hidden md:block">
+              <motion.div 
+                whileHover={{ scale: 1.12, rotate: 8 }}
+                onClick={triggerConfetti}
+                className="w-16 h-20 bg-white border-2 border-dashed border-[#ff70ae]/50 p-1 rounded-sm shadow-md flex flex-col items-center justify-center cursor-pointer select-none relative"
+                title="Seal of Love - Click for magic! 💕"
+              >
+                {/* Wavy scalloped stamp border details */}
+                <div className="absolute -inset-[3px] border border-dotted border-pink-200 pointer-events-none rounded-sm" />
+                <div className="w-9 h-9 bg-pink-50 rounded-full flex items-center justify-center border border-pink-100 text-[#ff70ae]">
+                  <Heart className="w-4 h-4 fill-current text-[#ff70ae] animate-pulse" />
+                </div>
+                <span className="text-[7px] font-mono font-bold text-[#ff70ae]/80 uppercase mt-2.5 tracking-wider">Love Stamp</span>
+                <span className="text-[5px] font-mono text-[#8A5A68]/60 uppercase tracking-widest mt-0.5">8 JUN 2026</span>
+              </motion.div>
             </div>
 
-            <div className="pt-4 md:pt-8 border-t border-[#ffd6e7]">
-              <p className="text-[10px] md:text-sm italic text-[#8A5A68] mb-1 md:mb-2">With Love,</p>
-              <p className="text-lg md:text-2xl font-serif text-[#ff70ae]">Ardhi Satria</p>
-              <p className="text-[9px] md:text-xs tracking-widest uppercase text-[#8A5A68] mt-1">8 June 2026</p>
+              <div className="space-y-3 md:space-y-6 relative z-10 pr-0 md:pr-14">
+                <div className="space-y-1.5 md:space-y-3.5">
+                  <div className="flex items-center gap-2">
+                    <Flower className="w-4 h-4 text-[#ff70ae] animate-spin-slow" />
+                    <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">A Little Note</span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl md:text-4xl font-serif text-[#4A2230] leading-snug font-bold">
+                    Happy Birthday, Ami Sayang 💖
+                  </h2>
+                </div>
+                
+                {/* Note Content Text - Scrollable to fit all device heights and ratios perfectly */}
+                <div className="space-y-3 text-xs md:text-sm lg:text-base text-[#4A2230] font-medium leading-relaxed md:leading-loose md:max-h-[48vh] md:overflow-y-auto pr-1 md:pr-4 custom-scrollbar">
+                  <p className="mt-1">
+                    I honestly don't know how to fit everything I want to say into just a few paragraphs.
+                  </p>
+                  <p className="mt-2">
+                    Thank you for being my favorite person. Thank you for all the laughs, all the random conversations, all the little moments that make my days so much better.
+                  </p>
+                  <p className="mt-2">
+                    Being with you makes even ordinary days feel special.
+                  </p>
+                  <p className="mt-2">
+                    I hope this year brings you more happiness, more reasons to smile, and all the good things you've been wishing for. You deserve so much love, kindness, and beautiful things in life.
+                  </p>
+                  <p className="mt-2">
+                    And if there's one thing I want you to remember today, it's that you are deeply loved. More than you know.
+                  </p>
+                  <p className="mt-2">
+                    Thank you for always being my safest place, my comfort, and one of the best things that has ever happened to me.
+                  </p>
+                  <p className="mt-2">
+                    I can't wait to make more memories with you, go on more little adventures, and spend more birthdays by your side.
+                  </p>
+                  <p className="mt-2 font-semibold text-rose-600 flex items-center gap-1.5 flex-wrap">
+                    Happy 24th birthday, Ami. ❤️
+                  </p>
+                  <p className="font-semibold text-rose-600">
+                    I love you, always.
+                  </p>
+                </div>
+
+                {/* Sender signature block */}
+                <div className="pt-4 md:pt-6 border-t border-[#ffd6e7] flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] md:text-xs italic text-[#8A5A68] mb-0.5">With Love,</p>
+                    <p className="text-base md:text-xl font-serif text-[#ff70ae] font-semibold tracking-wide">Ardhi Satria</p>
+                    <p className="text-[8px] md:text-xs tracking-widest uppercase text-[#8A5A68]/70 font-mono mt-0.5">8 June 2026 ✨</p>
+                  </div>
+                
+                {/* Clickable wax seal or shiny heart interactive stamp at the bottom corner */}
+                <div className="flex flex-col items-center gap-1">
+                  <motion.button
+                    whileHover={{ scale: 1.15, rotate: -12 }}
+                    whileActive={{ scale: 0.9 }}
+                    onClick={triggerConfetti}
+                    className="w-12 h-12 bg-gradient-to-tr from-[#ff5293] to-[#ff70ae] hover:from-[#ff3a81] hover:to-[#ff5c9e] rounded-full flex items-center justify-center shadow-lg shadow-[#ff5293]/30 border-2 border-white relative cursor-pointer group"
+                    title="Press to stamp love!"
+                  >
+                    <Heart className="w-5 h-5 fill-rose-100 text-white group-hover:scale-110 transition-transform" />
+                    {/* Ring animation on hover */}
+                    <span className="absolute inset-x-0 inset-y-0 rounded-full border border-pink-400 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300 pointer-events-none" />
+                  </motion.button>
+                  <span className="text-[7px] font-mono font-bold tracking-widest text-[#8A5A68] uppercase">Seal & Sparkle ✨</span>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <div className="order-1 lg:order-2 flex justify-center">
-             <motion.img 
-              initial={{ rotate: 5, scale: 0.9 }}
-              whileInView={{ rotate: -2, scale: 1 }}
-              src={imageSectionImage} 
-              alt="Ami" 
-              className="w-full max-w-[160px] md:max-w-sm aspect-[3/4] object-cover rounded-[1.5rem] md:rounded-[3rem] shadow-2xl border-white border-2 md:border-[10px]" 
-            />
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* SURPRISE SECTION */}
-      <section id="surprise" className="relative z-10 h-[100dvh] snap-start flex items-center justify-center px-6">
+      <section id="surprise" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex items-center justify-center px-6 py-12 md:py-0">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -1113,7 +1976,7 @@ export default function App() {
 
         {/* Surprise Full Page Overlay */}
         <AnimatePresence>
-          {showSurprise && (
+          {false && showSurprise && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1163,7 +2026,6 @@ export default function App() {
                 </motion.div>
               )}
 
-              {/* Screens 3 & 4: Immersive Fullscreen-feeling Camera Workspace */}
               {showCamera && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -1171,149 +2033,354 @@ export default function App() {
                   exit={{ opacity: 0, y: 10 }}
                   className="fixed inset-0 z-[105] bg-[#fff5f8] overflow-y-auto w-full h-full flex items-center justify-center py-6 px-4 md:px-8"
                 >
-                  <div className="w-full max-w-2xl bg-white/60 backdrop-blur-md border border-white/50 rounded-3xl p-4 md:p-8 shadow-2xl select-none flex flex-col space-y-4 md:space-y-6 relative">
-                    
-                    {/* Top Status and Back-Close Action Bar */}
-                    <div className="flex items-center justify-between shrink-0">
-                      <button
-                        onClick={handleCameraBack}
-                        className="px-4 py-2 rounded-full bg-white border border-pink-100 text-[#ff70ae] font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-pink-50 hover:border-pink-200 transition-colors"
-                      >
-                        <ChevronLeft size={16} strokeWidth={3} />
-                        Close
-                      </button>
+                  <div className="w-full max-w-5xl md:max-w-6xl bg-white/60 backdrop-blur-md border border-white/50 rounded-3xl p-4 md:p-6 lg:p-8 shadow-2xl select-none relative">
+                    <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6 lg:gap-8 items-stretch">
+                      
+                      {/* Left Column: Camera, Trigger, & Settings Slots */}
+                      <div className={`${mobilePhotoboothStep === 'capture' ? 'flex' : 'hidden lg:flex'} flex-col space-y-4 md:space-y-5 justify-between`}>
+                        
+                        {/* Top Status and Back-Close Action Bar */}
+                        <div className="flex items-center justify-between shrink-0">
+                          <button
+                            onClick={handleCameraBack}
+                            className="px-4 py-2 rounded-full bg-white border border-pink-100 text-[#ff70ae] font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-pink-50 hover:border-pink-200 transition-colors"
+                          >
+                            <ChevronLeft size={16} strokeWidth={3} />
+                            Close
+                          </button>
 
-                      <span className="text-[10px] md:text-xs font-extrabold text-[#ff70ae] tracking-wider uppercase bg-[#fff5f8] px-4 py-1.5 rounded-full border border-pink-200/30 shadow-sm">
-                        Shot {activeSlotIndex + 1} of 3
-                      </span>
-                    </div>
-
-                    {/* Camera Feed Viewport */}
-                    <div className="relative w-full aspect-video bg-black rounded-2xl md:rounded-[2rem] overflow-hidden shadow-lg border border-pink-100/50 flex items-center justify-center group/cam shadow-[#ff70ae]/5">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        onLoadedMetadata={(e) => {
-                          e.currentTarget.play().catch(err => console.error("Webcam playback error:", err));
-                        }}
-                        className="w-full h-full object-cover scale-x-[-1]"
-                      />
-
-                      {/* Align text pill top-center overlay */}
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
-                        <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 text-[9px] md:text-xs font-bold text-white uppercase tracking-widest leading-none select-none">
-                          {isCountingDown ? "Hold still! 📸" : "Align your beautiful smile ✨"}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] md:text-xs font-extrabold text-[#ff70ae] tracking-wider uppercase bg-[#fff5f8] px-3.5 py-1.5 rounded-full border border-pink-200/30 shadow-xs">
+                              Shot {activeSlotIndex + 1} of {photoMode}
+                            </span>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Interactive shutter release centered overlays */}
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-                        <button
-                          onClick={handleCapturePhoto}
-                          disabled={isCountingDown}
-                          className="relative w-14 h-14 rounded-full flex items-center justify-center bg-white/20 border border-white/50 hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md">
-                            <div className="w-10 h-10 rounded-full bg-[#ff70ae]/15 border border-[#ff70ae]/30 flex items-center justify-center">
-                              <div className="w-5 h-5 rounded-full bg-[#ff70ae]" />
+                        {/* Layout Selector: прямо на экране камеры для мобильного и десктопа */}
+                        <div className="w-full bg-white/40 p-2 rounded-2xl border border-pink-100/30 shadow-2xs">
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+                            <span className="text-[10px] sm:text-xs font-bold text-[#8A5A68] uppercase tracking-wider">
+                              Choose Layout Size 📐
+                            </span>
+                            <div className="inline-flex bg-pink-100/30 p-0.5 rounded-full border border-pink-200/10 w-full sm:w-auto min-w-[200px]">
+                              <button
+                                type="button"
+                                onClick={() => handlePhotoModeChange(3)}
+                                className={`flex-1 py-1 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                  photoMode === 3 
+                                    ? 'bg-[#ff70ae] text-white shadow-xs' 
+                                    : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                                }`}
+                              >
+                                🎞️ 3 Photos
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePhotoModeChange(6)}
+                                className={`flex-1 py-1 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                  photoMode === 6 
+                                    ? 'bg-[#ff70ae] text-white shadow-xs' 
+                                    : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                                }`}
+                              >
+                                ✨ 6 Photos
+                              </button>
                             </div>
                           </div>
-                        </button>
-                      </div>
-
-                      {/* Shutter Countdown overlay */}
-                      {countdown !== null && (
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-30 select-none">
-                          <motion.div
-                            key={countdown}
-                            initial={{ scale: 0.3, opacity: 0 }}
-                            animate={{ scale: [0.3, 1.3, 1], opacity: [0, 1, 1] }}
-                            transition={{ duration: 0.55 }}
-                            className="text-7xl md:text-8xl font-black font-serif text-[#ff70ae] drop-shadow-[0_4px_16px_rgba(255,255,255,0.85)] italic"
-                          >
-                            {countdown}
-                          </motion.div>
                         </div>
-                      )}
 
-                      {/* Camera flash visual frame feedback */}
-                      {shutterFlash && (
-                        <div className="absolute inset-0 bg-white z-[90] pointer-events-none" />
-                      )}
-                    </div>
-
-                    {/* Result Slots Grid - Row of 3 interactive cards */}
-                    <div className="grid grid-cols-3 gap-3 md:gap-5 w-full">
-                      {[0, 1, 2].map((idx) => {
-                        const photo = capturedPhotos[idx];
-                        const isActive = activeSlotIndex === idx;
-                        return (
-                          <button
-                            key={idx}
-                            disabled={isCountingDown}
-                            onClick={() => {
-                              setActiveSlotIndex(idx);
+                        {/* Camera Feed Viewport */}
+                        <div className="relative w-full aspect-video bg-black rounded-2xl md:rounded-[2rem] overflow-hidden shadow-lg border border-pink-100/50 flex items-center justify-center group/cam shadow-[#ff70ae]/5">
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            onLoadedMetadata={(e) => {
+                              e.currentTarget.play().catch(err => console.error("Webcam playback error:", err));
                             }}
-                            className={`aspect-[4/3] rounded-xl md:rounded-2xl border-2 overflow-hidden flex flex-col items-center justify-center relative transition-all duration-300 bg-gray-50 shadow-sm ${
-                              isActive
-                                ? 'border-[#ff70ae] bg-white ring-4 ring-pink-100/50 scale-[1.03] shadow-md z-10'
-                                : 'border-pink-50/50 bg-gray-50/60 hover:bg-white hover:border-[#ff70ae]/20 cursor-pointer'
-                            }`}
-                          >
-                            {photo ? (
-                              <div className="relative w-full h-full group">
-                                <img src={photo} alt={`Captured ${idx + 1}`} className="w-full h-full object-cover select-none" />
-                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <span className="text-[8px] md:text-xs text-white font-bold tracking-wider uppercase select-none">
-                                    Retake 📸
-                                  </span>
+                            className="w-full h-full object-cover scale-x-[-1]"
+                          />
+
+                          {/* Align text pill top-center overlay */}
+                          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20">
+                            <div className="bg-black/40 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 text-[9px] md:text-xs font-bold text-white uppercase tracking-widest leading-none select-none">
+                              {isCountingDown ? "Hold still! 📸" : "Align your beautiful smile ✨"}
+                            </div>
+                          </div>
+
+                          {/* Interactive shutter release centered overlays */}
+                          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
+                            <button
+                              onClick={handleCapturePhoto}
+                              disabled={isCountingDown}
+                              className="relative w-14 h-14 rounded-full flex items-center justify-center bg-white/20 border border-white/50 hover:scale-105 active:scale-95 transition-transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-md">
+                                <div className="w-10 h-10 rounded-full bg-[#ff70ae]/15 border border-[#ff70ae]/30 flex items-center justify-center">
+                                  <div className="w-5 h-5 rounded-full bg-[#ff70ae]" />
                                 </div>
                               </div>
-                            ) : (
-                              <div className="flex flex-col items-center justify-center p-1 text-center select-none">
-                                <span className="text-[9px] md:text-xs font-semibold text-gray-400 capitalize whitespace-nowrap">
-                                  Result {idx + 1}
-                                </span>
-                              </div>
-                            )}
+                            </button>
+                          </div>
 
-                            {isActive && (
-                              <span className="absolute bottom-1 px-2 py-0.5 rounded-full bg-[#ff70ae] text-[6px] md:text-[8px] text-white font-extrabold uppercase tracking-wide">
-                                Active
-                              </span>
-                            )}
+                          {/* Shutter Countdown overlay */}
+                          {countdown !== null && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-30 select-none">
+                              <motion.div
+                                key={countdown}
+                                initial={{ scale: 0.3, opacity: 0 }}
+                                animate={{ scale: [0.3, 1.3, 1], opacity: [0, 1, 1] }}
+                                transition={{ duration: 0.55 }}
+                                className="text-7xl md:text-8xl font-black font-serif text-[#ff70ae] drop-shadow-[0_4px_16px_rgba(255,255,255,0.85)] italic"
+                              >
+                                {countdown}
+                              </motion.div>
+                            </div>
+                          )}
+
+                          {/* Camera flash visual frame feedback */}
+                          {shutterFlash && (
+                            <div className="absolute inset-0 bg-white z-[90] pointer-events-none" />
+                          )}
+                        </div>
+
+                        {/* Result Slots Matrix: Row of columns, wrapping onto 2 rows for 6 shots */}
+                        <div className="grid grid-cols-3 gap-2.5 md:gap-4 w-full">
+                          {capturedPhotos.map((photo, idx) => {
+                            const isActive = activeSlotIndex === idx;
+                            return (
+                              <button
+                                key={idx}
+                                disabled={isCountingDown}
+                                onClick={() => {
+                                  setActiveSlotIndex(idx);
+                                }}
+                                className={`aspect-[4/3] rounded-xl md:rounded-2xl border-2 overflow-hidden flex flex-col items-center justify-center relative transition-all duration-300 bg-gray-50 shadow-xs ${
+                                  isActive
+                                    ? 'border-[#ff70ae] bg-white ring-4 ring-pink-100/50 scale-[1.02] shadow-sm z-10'
+                                    : 'border-pink-50/50 bg-gray-50/60 hover:bg-white hover:border-[#ff70ae]/20 cursor-pointer'
+                                }`}
+                              >
+                                {photo ? (
+                                  <div className="relative w-full h-full group">
+                                    <img src={photo} alt={`Captured ${idx + 1}`} className="w-full h-full object-cover select-none" />
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-[8px] md:text-xs text-white font-bold tracking-wider uppercase select-none">
+                                        Retake 📸
+                                      </span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-center justify-center p-1 text-center select-none">
+                                    <span className="text-[10px] md:text-xs font-semibold text-gray-400 capitalize whitespace-nowrap">
+                                      Shot {idx + 1}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {isActive && (
+                                  <span className="absolute bottom-1 px-1.5 py-0.5 rounded-full bg-[#ff70ae] text-[6px] md:text-[8px] text-white font-extrabold uppercase tracking-wide">
+                                    Active
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Proceed to stylist trigger on mobile if they have captured at least some pictures */}
+                        {capturedPhotos.some(p => p !== null) && (
+                          <div className="lg:hidden w-full pt-2">
+                            <button
+                              type="button"
+                              onClick={() => setMobilePhotoboothStep('preview')}
+                              className="w-full py-3.5 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg text-sm"
+                            >
+                              Go to Style & Preview 🎨 ✨
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right Column: Real-time Live Film Strip Mockup Preview (Adaptive Step layout for mobile and desktop) */}
+                      <div className={`${mobilePhotoboothStep === 'preview' ? 'flex' : 'hidden lg:flex'} flex-col items-center justify-start bg-pink-50/20 rounded-2xl p-4 md:p-5 border border-pink-100/30 w-full self-start lg:sticky lg:top-4 mt-2 lg:mt-0 max-h-[82vh] lg:max-h-[82vh] overflow-y-auto`}>
+                        
+                        {/* Mobile-Only Step Header */}
+                        <div className="lg:hidden w-full flex items-center justify-between mb-4 border-b border-pink-100/40 pb-2.5">
+                          <button
+                            onClick={() => setMobilePhotoboothStep('capture')}
+                            className="px-3.5 py-1.5 rounded-full bg-white border border-pink-100 text-[#ff70ae] font-bold text-[10px] flex items-center gap-1 shadow-2xs hover:bg-pink-50 transition-colors"
+                          >
+                            <ChevronLeft size={14} strokeWidth={3} />
+                            Change Photo/Retake
                           </button>
-                        );
-                      })}
-                    </div>
+                          <span className="text-[10px] font-black text-[#5c3e47] uppercase tracking-wider">Style frame ✨</span>
+                        </div>
 
-                    {/* Footer Trigger CTA Button */}
-                    <div className="w-full pt-1">
-                      {capturedPhotos.every((p) => p !== null) ? (
-                        <motion.button
-                          initial={{ scale: 0.95, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          whileHover={{ scale: 1.01 }}
-                          whileActive={{ scale: 0.99 }}
-                          onClick={async () => {
-                            await generateCompositeStrip(capturedPhotos as string[]);
-                          }}
-                          className="w-full py-3.5 bg-gradient-to-r from-[#ff70ae] to-[#ff5293] text-white rounded-2xl font-bold text-sm shadow-xl shadow-pink-200/50 flex items-center justify-center gap-2 hover:from-[#ff5a9e] hover:to-[#ff3d85] transition-all"
-                        >
-                          Create Photo Strip 💖
-                        </motion.button>
-                      ) : (
-                        <button
-                          disabled
-                          className="w-full py-3.5 bg-gray-200 text-gray-400 rounded-2xl font-bold text-sm select-none cursor-not-allowed"
-                        >
-                          Save
-                        </button>
-                      )}
+                        <div className="text-center mb-3">
+                          <span className="text-[10px] font-bold tracking-widest text-[#ff70ae] bg-white px-3.5 py-1 rounded-full shadow-xs border border-pink-100/60 uppercase">
+                            Live Film Strip Preview ✨
+                          </span>
+                          <p className="text-[10px] text-[#8A5A68] mt-1.5">See your custom keepsake building in real-time!</p>
+                        </div>
+
+                        {/* Layout Selectors Group: Hidden on mobile (since we put size selectors in the camera shot view) or visible on large screens */}
+                        <div className="hidden lg:block w-full space-y-3 mb-3 bg-white/50 p-2.5 rounded-2xl border border-pink-100/20 shadow-xs">
+                          {/* 1. Strip Count Choice Switcher */}
+                          <div className="space-y-1 w-full flex flex-col items-center">
+                            <span className="text-[9px] font-bold text-[#8A5A68] uppercase tracking-wider block text-center">
+                              Select Size 📐
+                            </span>
+                            <div className="inline-flex bg-pink-100/30 p-0.5 rounded-full border border-pink-200/10 w-full">
+                              <button
+                                type="button"
+                                onClick={() => handlePhotoModeChange(3)}
+                                className={`flex-1 py-1 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                  photoMode === 3 
+                                    ? 'bg-[#ff70ae] text-white shadow-xs scale-[1.01]' 
+                                    : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                                  }`}
+                              >
+                                🎞️ 3-Shot Strip
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePhotoModeChange(6)}
+                                className={`flex-1 py-1 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                  photoMode === 6 
+                                    ? 'bg-[#ff70ae] text-white shadow-xs scale-[1.01]' 
+                                    : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                                  }`}
+                              >
+                                ✨ 6-Shot Strip
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Frame color selectors:
+                            1. VERTICAL on Desktop (lg:flex)
+                            2. HORIZONTAL SCROLLING on Mobile (flex lg:hidden)
+                        */}
+
+                        {/* Mobile Frame Color Horizontal scrolling container */}
+                        <div className="w-full lg:hidden space-y-2 mb-4 bg-white/40 border border-pink-100/20 p-2.5 rounded-2xl">
+                          <span className="text-[10px] font-black text-[#8A5A68] uppercase tracking-widest block text-center">
+                            Select Frame Color 🌈
+                          </span>
+                          <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none snap-x px-1 max-w-full">
+                            {COLOR_OPTIONS.map((opt) => {
+                              const isSelected = stripDesign === opt.id;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => setStripDesign(opt.id)}
+                                  className={`snap-center min-w-[85px] py-1.5 px-2 rounded-xl border transition-all flex flex-col items-center justify-center gap-1 cursor-pointer select-none ${
+                                    isSelected
+                                      ? `${opt.bgColor} ${opt.borderColor} ${opt.activeColor} scale-[1.04] shadow-xs`
+                                      : 'bg-white/90 border-pink-100/50 hover:bg-white hover:border-pink-300'
+                                  }`}
+                                >
+                                  <span 
+                                    className="w-4 h-4 rounded-full border border-black/15 shadow-inner shrink-0"
+                                    style={{ backgroundColor: opt.dotColor }}
+                                  />
+                                  <span className="text-[9px] font-black uppercase text-center text-[#5c3e47] tracking-tight leading-none truncate w-full">
+                                    {opt.id === 'soft-pink' ? 'Soft Pink' : opt.name}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Side-by-side Layout on Desktop: Live Film Strip Mockup + Vertical Color Customizer Sidebar */}
+                        <div className="hidden lg:flex w-full flex-row items-center justify-center gap-3 md:gap-5 py-1">
+                          
+                          {/* Live render of Film Strip on Left */}
+                          <div className="flex-1 flex justify-center items-center">
+                            {renderLiveFilmStrip("w-36 sm:w-40 md:w-44")}
+                          </div>
+
+                          {/* Vertical Color Customizer Sidebar on Right */}
+                          <div className="flex flex-col items-center gap-1.5 p-1.5 bg-white/70 rounded-2xl border border-pink-100/30 shadow-xs self-stretch justify-center w-[80px] sm:w-[90px]">
+                            <span className="text-[9px] font-extrabold text-[#8A5A68] uppercase tracking-widest text-center leading-none mb-1 select-none">
+                              Frame 🎨
+                            </span>
+                            <div className="flex flex-col gap-1 w-full">
+                              {COLOR_OPTIONS.map((opt) => {
+                                const isSelected = stripDesign === opt.id;
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => setStripDesign(opt.id)}
+                                    className={`w-full py-1.5 px-1.5 rounded-xl border transition-all flex flex-col items-center justify-center gap-1 cursor-pointer select-none ${
+                                      isSelected
+                                        ? `${opt.bgColor} ${opt.borderColor} ${opt.activeColor} scale-[1.03]`
+                                        : 'bg-white/40 border-pink-100/10 hover:bg-white/95 hover:border-pink-200'
+                                    }`}
+                                  >
+                                    <span 
+                                      className="w-3.5 h-3.5 rounded-full border border-black/15 shadow-inner shrink-0"
+                                      style={{ backgroundColor: opt.dotColor }}
+                                    />
+                                    <span className="text-[8px] font-black uppercase text-center text-[#5c3e47] tracking-tight leading-none truncate w-full">
+                                      {opt.id === 'soft-pink' ? 'Soft' : opt.name}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                        </div>
+
+                        {/* Live Preview Rendered AT THE BOTTOM on Mobile */}
+                        <div className="lg:hidden w-full flex flex-col items-center justify-center py-3 bg-white/10 rounded-2xl border border-pink-100/10">
+                          {renderLiveFilmStrip("w-40 sm:w-44")}
+                        </div>
+
+                        {/* Footer Trigger CTA Button placed under live film strip preview */}
+                        <div className="w-full mt-4 pt-4 border-t border-pink-100/30">
+                          {capturedPhotos.every((p) => p !== null) ? (
+                            <motion.button
+                              initial={{ scale: 0.95, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              whileHover={{ scale: 1.01 }}
+                              whileActive={{ scale: 0.99 }}
+                              onClick={async () => {
+                                await generateCompositeStrip(capturedPhotos as string[]);
+                              }}
+                              className="w-full py-3.5 bg-gradient-to-r from-[#ff70ae] to-[#ff5293] text-white rounded-2xl font-bold text-sm shadow-xl shadow-pink-200/50 flex items-center justify-center gap-2 hover:from-[#ff5a9e] hover:to-[#ff3d85] transition-all"
+                            >
+                              Create Photo Strip 💖
+                            </motion.button>
+                          ) : (
+                            <div className="space-y-2">
+                              <button
+                                disabled
+                                className="w-full py-3.5 bg-gray-200 text-gray-400 rounded-2xl font-bold text-sm select-none cursor-not-allowed"
+                              >
+                                Capture {capturedPhotos.filter(p => p !== null).length}/{photoMode} Photos to Save ✨
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMobilePhotoboothStep('capture')}
+                                className="lg:hidden w-full py-2 bg-white border border-pink-200 text-[#ff70ae] rounded-xl font-bold text-xs"
+                              >
+                                📸 Capture Remaining Shots
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </motion.div>
+              )}
 
                   {/* Screen 5: Vertical Photo Strip Result Popup Modal Dialog */}
                   <AnimatePresence>
@@ -1347,7 +2414,7 @@ export default function App() {
                               <div className="mb-4 text-center">
                                 <div className="inline-flex flex-col items-center">
                                   {/* Inner subtle mechanical slot slit */}
-                                  <div className="w-48 h-3 bg-neutral-900 rounded-t-xl border-t border-b border-pink-200/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center relative overflow-hidden">
+                                  <div className={`${photoMode === 6 ? 'w-80' : 'w-48'} h-3 bg-neutral-900 rounded-t-xl border-t border-b border-pink-200/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center relative overflow-hidden transition-all duration-500`}>
                                     {/* Subtle glowing laser line resembling a high-tech photobooth slide */}
                                     <div className="absolute inset-x-0 top-0.5 h-[1px] bg-pink-400 opacity-60 shadow-[0_0_4px_#ff70ae]" />
                                   </div>
@@ -1378,7 +2445,7 @@ export default function App() {
                                   <img
                                     src={capturedPhoto}
                                     alt="Our Memories Strip"
-                                    className="max-h-[48vh] md:max-h-[60vh] aspect-[640/1600] object-contain rounded-xl shadow-2xl border-white border-[6px] md:border-8 bg-white"
+                                    className={`max-h-[48vh] md:max-h-[60vh] ${photoMode === 6 ? 'aspect-[1280/1600]' : 'aspect-[640/1600]'} object-contain rounded-xl shadow-2xl border-white border-[6px] md:border-8 bg-white`}
                                   />
                                 </motion.div>
                               </div>
@@ -1444,8 +2511,6 @@ export default function App() {
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </motion.div>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1458,12 +2523,12 @@ export default function App() {
 
       <button
         onClick={toggleMusic}
-        className={`fixed bottom-8 right-8 z-[60] w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-xl hover:scale-110 active:scale-95 ${isPlaying ? 'bg-[#ff70ae] text-white' : 'bg-white text-[#ff70ae] border border-pink-100'}`}
+        className={`fixed bottom-4 right-4 md:bottom-8 md:right-8 z-[60] w-11 h-11 md:w-16 md:h-16 rounded-full flex items-center justify-center transition-all shadow-xl hover:scale-110 active:scale-95 ${isPlaying ? 'bg-[#ff70ae] text-white' : 'bg-white text-[#ff70ae] border border-pink-100'}`}
       >
         {isPlaying ? (
-          <Music className="w-6 h-6 animate-pulse" />
+          <Music className="w-5 h-5 md:w-6 md:h-6 animate-pulse" />
         ) : (
-          <MusicSlash className="w-6 h-6" />
+          <MusicSlash className="w-5 h-5 md:w-6 md:h-6" />
         )}
       </button>
     </div>
