@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import { 
@@ -15,6 +15,10 @@ import {
   Music, 
   Music2, 
   Play, 
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
   Square, 
   X, 
   ChevronRight,
@@ -23,7 +27,8 @@ import {
   Coffee,
   Utensils,
   Camera as CameraIcon,
-  Flower
+  Flower,
+  Download
 } from 'lucide-react';
 
 function MusicSlash({ className }: { className?: string }) {
@@ -59,6 +64,286 @@ interface ColorOption {
   activeColor: string;
 }
 
+function FloatingHearts() {
+  const [hearts, setHearts] = useState<{ id: number; left: number; size: number; duration: number; delay: number; scale: number; opacity: number; sway: number }[]>([]);
+
+  useEffect(() => {
+    // Generate a set of static randomized hearts on mount to prevent any infinite run loop overhead
+    const initialHearts = Array.from({ length: 22 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 92 + 4, // 4% to 96%
+      size: Math.random() * 12 + 10, // 10px to 22px
+      duration: Math.random() * 12 + 14, // 14s to 26s for elegant slow drift
+      delay: Math.random() * -30, // negative delay so they are instantly scattered up the screen on load
+      scale: Math.random() * 0.4 + 0.6, // 0.6 to 1.0
+      opacity: Math.random() * 0.2 + 0.12, // subtle opacity range (12% to 32%)
+      sway: Math.random() * 50 - 25, // horizontal sway range
+    }));
+    setHearts(initialHearts);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[45]">
+      {hearts.map((heart) => (
+        <motion.div
+          key={heart.id}
+          className="absolute bottom-0 text-pink-400/70"
+          style={{
+            left: `${heart.left}%`,
+            opacity: heart.opacity,
+            fontSize: `${heart.size}px`,
+          }}
+          animate={{
+            y: ['105vh', '-10vh'],
+            x: [0, heart.sway, -heart.sway * 1.2, heart.sway * 0.8, 0],
+            rotate: [0, heart.sway * 1.5, -heart.sway * 1.5, 0],
+          }}
+          transition={{
+            duration: heart.duration,
+            repeat: Infinity,
+            delay: heart.delay,
+            ease: "linear",
+          }}
+        >
+          <svg
+            className="w-full h-full fill-current"
+            viewBox="0 0 24 24"
+            width={heart.size}
+            height={heart.size}
+          >
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+          </svg>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+interface MemoryVideoPlayerProps {
+  videoSrc: string;
+  onPlayStateChange: (isPlaying: boolean) => void;
+  memoryVideoRef: React.RefObject<HTMLVideoElement | null>;
+}
+
+function MemoryVideoPlayer({ videoSrc, onPlayStateChange, memoryVideoRef }: MemoryVideoPlayerProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.8);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef<any>(null);
+
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    controlsTimeoutRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false);
+      }
+    }, 2500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    };
+  }, [isPlaying]);
+
+  const togglePlay = () => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    if (isPlaying) {
+      video.pause();
+    } else {
+      video.play();
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    setCurrentTime(video.currentTime);
+  };
+
+  const handleLoadedMetadata = () => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    setDuration(video.duration);
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    const time = parseFloat(e.target.value);
+    video.currentTime = time;
+    setCurrentTime(time);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    const vol = parseFloat(e.target.value);
+    setVolume(vol);
+    video.volume = vol;
+    if (vol === 0) {
+      setIsMuted(true);
+      video.muted = true;
+    } else {
+      setIsMuted(false);
+      video.muted = false;
+    }
+  };
+
+  const toggleMute = () => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    const nextMute = !isMuted;
+    setIsMuted(nextMute);
+    video.muted = nextMute;
+    if (nextMute) {
+      video.volume = 0;
+    } else {
+      video.volume = volume;
+    }
+  };
+
+  const toggleFullscreen = () => {
+    const video = memoryVideoRef.current;
+    if (!video) return;
+    if (video.requestFullscreen) {
+      video.requestFullscreen();
+    } else if ((video as any).webkitRequestFullscreen) {
+      (video as any).webkitRequestFullscreen();
+    }
+  };
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return '00:00';
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div 
+      className="relative w-full aspect-video md:aspect-[16/9] max-w-2xl bg-neutral-900 rounded-2xl md:rounded-3xl overflow-hidden border border-pink-100 shadow-xl group/player"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => isPlaying && setShowControls(false)}
+    >
+      <video
+        ref={memoryVideoRef}
+        src={videoSrc}
+        className="w-full h-full object-contain cursor-pointer"
+        onClick={togglePlay}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onPlay={() => {
+          setIsPlaying(true);
+          onPlayStateChange(true);
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+          onPlayStateChange(false);
+        }}
+        playsInline
+      />
+
+      {/* Big Animated Center Play Overlay Button */}
+      <AnimatePresence>
+        {(!isPlaying || !showControls) && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 bg-black/10">
+            {!isPlaying && (
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.15 }}
+                whileActive={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlay();
+                }}
+                className="w-16 h-16 md:w-20 md:h-20 bg-white/90 hover:bg-white text-[#ff70ae] rounded-full flex items-center justify-center shadow-2xl border border-pink-100/50 pointer-events-auto cursor-pointer"
+              >
+                <Play className="w-6 h-6 md:w-8 md:h-8 fill-current translate-x-0.5 text-[#ff70ae]" />
+              </motion.button>
+            )}
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Styled Controls Overlay */}
+      <motion.div 
+        animate={{ opacity: showControls ? 1 : 0, y: showControls ? 0 : 5 }}
+        transition={{ duration: 0.2 }}
+        className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 md:p-4 flex flex-col gap-2 md:gap-3 z-20 pointer-events-auto"
+      >
+        {/* Progress Slider (Timeline Track) */}
+        <div className="flex items-center gap-3 w-full group/timeline">
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            value={currentTime}
+            onChange={handleSeek}
+            className="w-full h-1 h-1.5 rounded-lg bg-white/30 accent-[#ff70ae] cursor-pointer hover:h-2 transition-all appearance-none"
+          />
+        </div>
+
+        {/* Action Button Controls Row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 md:gap-4">
+            {/* Play/Pause icon button */}
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="text-white hover:text-[#ff70ae] transition-colors focus:outline-none cursor-pointer"
+            >
+              {isPlaying ? <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current" /> : <Play className="w-4 h-4 md:w-5 md:h-5 fill-current" />}
+            </button>
+
+            {/* Time labels */}
+            <span className="text-white/90 text-[10px] md:text-xs font-mono select-none">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+
+            {/* Volume control */}
+            <div className="flex items-center gap-1.5 md:gap-2 group/volume">
+              <button
+                type="button"
+                onClick={toggleMute}
+                className="text-white hover:text-[#ff70ae] transition-colors focus:outline-none cursor-pointer"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 md:w-5 md:h-5" /> : <Volume2 className="w-4 h-4 md:w-5 md:h-5" />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={isMuted ? 0 : volume}
+                onChange={handleVolumeChange}
+                className="w-12 sm:w-16 h-1 rounded-lg bg-white/20 accent-white group-hover/volume:w-16 sm:group-hover/volume:w-20 cursor-pointer transition-all appearance-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Fullscreen Option */}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="text-white hover:text-[#ff70ae] transition-colors focus:outline-none cursor-pointer"
+              title="Full screen"
+            >
+              <Maximize className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 const COLOR_OPTIONS: ColorOption[] = [
   { id: 'soft-pink', name: 'Soft Pink', dotColor: '#ffd2e1', bgColor: 'bg-[#fff0f4]', borderColor: 'border-[#ffccd7]', activeColor: 'ring-2 ring-pink-300 shadow-xs' },
   { id: 'pink', name: 'Pink', dotColor: '#ff70ae', bgColor: 'bg-[#ffeaf3]', borderColor: 'border-[#ffaed1]', activeColor: 'ring-2 ring-pink-400 shadow-xs' },
@@ -82,6 +367,7 @@ export default function App() {
   const [isOpening, setIsOpening] = useState(false);
   const [invitationOpened, setInvitationOpened] = useState(false);
   const [showSurprise, setShowSurprise] = useState(false);
+  const [showDownloadChoice, setShowDownloadChoice] = useState(false);
   const [currentView, setCurrentView] = useState<'landing' | 'photobooth'>('landing');
   const [showCamera, setShowCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -92,6 +378,57 @@ export default function App() {
   const [galleryToast, setGalleryToast] = useState<string | null>(null);
   const [currentInviteImage, setCurrentInviteImage] = useState(0);
   const [activeScheduleStep, setActiveScheduleStep] = useState(0);
+  const [isSurpriseButtonHovered, setIsSurpriseButtonHovered] = useState(false);
+  const [isHoveringSignature, setIsHoveringSignature] = useState(false);
+  const [fallingHearts, setFallingHearts] = useState<Array<{
+    id: number;
+    x: number;
+    size: number;
+    duration: number;
+    emoji: string;
+    rotation: number;
+  }>>([]);
+
+  useEffect(() => {
+    if (!isHoveringSignature) return;
+
+    // Immediately trigger a small initial burst when hovering over the signature
+    const initialHearts = Array.from({ length: 8 }).map((_, idx) => ({
+      id: Date.now() + idx,
+      x: Math.random() * 90 + 5, // Keep within 5% to 95%
+      size: Math.random() * 14 + 14, // 14px to 28px
+      duration: Math.random() * 1.5 + 2.0, // 2s to 3.5s
+      emoji: ['💝', '💖', '💕', '💗', '💓', '❤️', '🧁', '✨', '🌸'][Math.floor(Math.random() * 9)],
+      rotation: Math.random() * 120 - 60,
+    }));
+    setFallingHearts((prev) => [...prev, ...initialHearts]);
+
+    // Create custom interval to keep generating falling hearts while hovered
+    const interval = setInterval(() => {
+      const newHeart = {
+        id: Date.now() + Math.random(),
+        x: Math.random() * 90 + 5,
+        size: Math.random() * 14 + 14,
+        duration: Math.random() * 1.5 + 2.0,
+        emoji: ['💝', '💖', '💕', '💗', '💓', '❤️', '🧁', '✨', '🌸'][Math.floor(Math.random() * 9)],
+        rotation: Math.random() * 120 - 60,
+      };
+      setFallingHearts((prev) => {
+        const filtered = prev.filter((h) => Date.now() - h.id < 4500);
+        return [...filtered, newHeart];
+      });
+    }, 180);
+
+    return () => clearInterval(interval);
+  }, [isHoveringSignature]);
+
+  useEffect(() => {
+    if (fallingHearts.length === 0) return;
+    const timer = setTimeout(() => {
+      setFallingHearts((prev) => prev.filter((h) => Date.now() - h.id < 4500));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [fallingHearts]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -111,7 +448,7 @@ export default function App() {
 
   // Supabase public URL for assets (keeping user's provided ones)
   const dresscodeImage = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/dresscode/3D%20ami.png';
-  const memoryVideo = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/birthday-assets/videos/memory-video.mp4';
+  const memoryVideo = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Our-Video.mov';
   const imageSectionImage = 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/background/Ours%202.png';
 
   // Helper to check for placeholder URLs
@@ -134,6 +471,7 @@ export default function App() {
     { id: 'dresscode', label: 'Dresscode' },
     { id: 'schedule', label: "Today's Plan" },
     { id: 'image-section', label: 'Our Album' },
+    { id: 'video-section', label: 'Our Video' },
     { id: 'letter', label: 'A Little Note' },
     { id: 'surprise', label: 'Last Thing' },
   ];
@@ -212,22 +550,78 @@ export default function App() {
     
     const imageSectionIndex = sectionNav.findIndex((item) => item.id === 'image-section');
     const imageSectionStart = imageSectionIndex * window.innerHeight;
-    const imageToLetterProgress = (page.scrollTop - imageSectionStart) / window.innerHeight;
+    const imageToLetterProgress = (page.scrollTop - imageSectionStart) / (window.innerHeight * 2);
 
     setActiveSection(section.id);
     setScrollProgress(maxScroll > 0 ? page.scrollTop / maxScroll : 0);
     setImageSectionProgress(Math.min(1, Math.max(0, imageToLetterProgress)));
   };
 
+  const triggerIntenseBirthdayConfetti = () => {
+    // Left side burst
+    confetti({
+      particleCount: 160,
+      spread: 90,
+      origin: { x: 0.1, y: 0.85 },
+      colors: ['#ff70ae', '#ff3366', '#ffccd5', '#ffd700', '#ffffff', '#e879f9'],
+      ticks: 350,
+      scalar: 1.2,
+    });
+    // Right side burst
+    confetti({
+      particleCount: 160,
+      spread: 90,
+      origin: { x: 0.9, y: 0.85 },
+      colors: ['#ff70ae', '#ff3366', '#ffccd5', '#ffd700', '#ffffff', '#e879f9'],
+      ticks: 350,
+      scalar: 1.2,
+    });
+    // Center rocket explosion of hearts/stars and colorful particles
+    setTimeout(() => {
+      confetti({
+        particleCount: 120,
+        spread: 120,
+        origin: { x: 0.5, y: 0.6 },
+        colors: ['#ff1493', '#ff69b4', '#ff85a1', '#ffd700', '#fff0f5'],
+        ticks: 240,
+        scalar: 1.4,
+      });
+    }, 180);
+    // Extra mini delay bursts for that magical continuing shower feel
+    setTimeout(() => {
+      confetti({
+        particleCount: 80,
+        angle: 60,
+        spread: 75,
+        origin: { x: 0.2, y: 0.7 },
+        colors: ['#ff70ae', '#ffd700'],
+        ticks: 200,
+      });
+      confetti({
+        particleCount: 80,
+        angle: 120,
+        spread: 75,
+        origin: { x: 0.8, y: 0.7 },
+        colors: ['#ff70ae', '#ffd700'],
+        ticks: 200,
+      });
+    }, 400);
+  };
+
   const handleOpenInvitation = () => {
     setIsOpening(true);
     setIsPlaying(true);
+    triggerIntenseBirthdayConfetti();
     
     setTimeout(() => {
       setInvitationOpened(true);
       setTimeout(() => {
         setIsOpening(false);
         document.getElementById('invitation')?.scrollIntoView({ behavior: 'smooth' });
+        // Secondary triumphant burst when scrolling fits the screen
+        setTimeout(() => {
+          triggerIntenseBirthdayConfetti();
+        }, 500);
       }, 1500);
     }, 500);
   };
@@ -527,6 +921,780 @@ export default function App() {
     }, 250);
   };
 
+  const downloadLetterAsImage = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 1150;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Enable text smoothing
+      ctx.imageSmoothingEnabled = true;
+
+      // 1. Background Gradient (Soft warm white to cute pale rose-crest)
+      const bgGrad = ctx.createLinearGradient(0, 0, 800, 1150);
+      bgGrad.addColorStop(0, '#ffffff');
+      bgGrad.addColorStop(0.5, '#fffefd');
+      bgGrad.addColorStop(1, '#fff4f6');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 800, 1150);
+
+      // 2. Vintage Grid texture
+      ctx.fillStyle = 'rgba(255, 112, 174, 0.08)';
+      for (let x = 0; x < 800; x += 32) {
+        for (let y = 0; y < 1150; y += 32) {
+          ctx.fillRect(x, y, 1.5, 1.5);
+        }
+      }
+
+      // 3. Double Borders
+      // Outer pinstripe border
+      ctx.strokeStyle = '#ffeaf1';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(30, 30, 740, 1090);
+
+      // Inner dotted/dashed border
+      ctx.strokeStyle = '#ffaed1';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.strokeRect(40, 40, 720, 1070);
+      ctx.setLineDash([]); // Reset line dash
+
+      // Helper to draw cute hearts
+      const drawHeart = (cx: number, cy: number, size: number, color: string) => {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(size / 2, -size / 2, size, 0, 0, size);
+        ctx.bezierCurveTo(-size, 0, -size / 2, -size / 2, 0, 0);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      };
+
+      // 4. Corner Decorations
+      drawHeart(70, 70, 14, '#ff70ae');
+      drawHeart(70, 1080, 14, '#ff70ae');
+      drawHeart(730, 1080, 14, '#ff70ae');
+
+      // 5. Love Stamp in Top Right Coordinate
+      ctx.save();
+      const stampX = 580;
+      const stampY = 70;
+      const stampW = 150;
+      const stampH = 190;
+      
+      // Stamp background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(stampX, stampY, stampW, stampH);
+      ctx.strokeStyle = '#ff70ae';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(stampX + 4, stampY + 4, stampW - 8, stampH - 8);
+
+      // Inner dashed line for stamp
+      ctx.strokeStyle = 'rgba(255, 112, 174, 0.5)';
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(stampX + 10, stampY + 10, stampW - 20, stampH - 20);
+      ctx.setLineDash([]);
+
+      // Heart circle inside stamp
+      ctx.beginPath();
+      ctx.arc(stampX + stampW / 2, stampY + 70, 32, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff0f4';
+      ctx.fill();
+      ctx.strokeStyle = '#ffaed1';
+      ctx.stroke();
+
+      // Draw real tiny heart inside stamp circle
+      drawHeart(stampX + stampW / 2, stampY + 60, 18, '#ff5293');
+
+      // Stamp Text
+      ctx.fillStyle = '#ff70ae';
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('LOVE STAMP', stampX + stampW / 2, stampY + 128);
+
+      ctx.fillStyle = '#8a5a68';
+      ctx.font = '9px monospace';
+      ctx.fillText('8 JUN 2026', stampX + stampW / 2, stampY + 148);
+      ctx.fillText("AMI'S DAY", stampX + stampW / 2, stampY + 164);
+      ctx.restore();
+
+      // 6. Left side headers
+      ctx.fillStyle = '#ff70ae';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('✿  A LITTLE NOTE', 80, 110);
+
+      // Happy Birthday headline
+      ctx.fillStyle = '#4A2230';
+      ctx.font = 'bold 36px Georgia, "Times New Roman", serif';
+      ctx.fillText('Happy Birthday,', 80, 165);
+      ctx.fillText('Ami Sayang 💗', 80, 215);
+
+      // Draw separator line under title
+      ctx.strokeStyle = '#ffd6e7';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(80, 255);
+      ctx.lineTo(540, 255);
+      ctx.stroke();
+
+      // 7. Write Note Content
+      const paragraphs = [
+        "Honestly, I don't know how to fit everything i wanna say into just a few paragraphs.",
+        "Thank you for being my favorite person. Thank you for all the laughs, all the random conversations, all the little moments that make my days so much better.",
+        "Being with you makes even ordinary days feel special.",
+        "I hope this year brings you more happiness, more reasons to smile, and all the good things you've been wishing for. You deserve so much love, kindness, and beautiful things in life.",
+        "And if there's one thing I want you to remember today, it's that you are deeply loved. More than you know.",
+        "Thank you for always being my safest place, my comfort, and one of the best things that has ever happened to me.",
+        "I can't wait to make more memories with you, go on more little adventures, and spend more birthdays by your side.",
+        "Happy 24th birthday, Ami. ❤️",
+        "I love you, always."
+      ];
+
+      ctx.fillStyle = '#4A2230';
+      ctx.textAlign = 'left';
+      
+      let currentY = 305;
+      const maxWidth = 640;
+      const lineHeight = 32;
+
+      // Text wrapping function inside canvas helper
+      const wrapText = (textStr: string, xPos: number, yPos: number, maxW: number, lineH: number, isSpecial = false) => {
+        if (isSpecial) {
+          ctx.font = 'bold 18px Georgia, serif';
+          ctx.fillStyle = '#e11d48'; // rose-600
+        } else {
+          ctx.font = '500 17px sans-serif';
+          ctx.fillStyle = '#4a2230';
+        }
+
+        const words = textStr.split(' ');
+        let line = '';
+        let startY = yPos;
+
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + words[n] + ' ';
+          const metrics = ctx.measureText(testLine);
+          const testWidth = metrics.width;
+          if (testWidth > maxW && n > 0) {
+            ctx.fillText(line, xPos, startY);
+            line = words[n] + ' ';
+            startY += lineH;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, xPos, startY);
+        return startY + lineH; // Return ending Y position for next paragraph
+      };
+
+      for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+        const text = paragraphs[pIdx];
+        const isSpecial = text.includes('Happy 24th') || text.includes('I love you, always');
+        currentY = wrapText(text, 80, currentY, maxWidth, lineHeight, isSpecial);
+        currentY += 12; // Paragraph bottom spacing
+      }
+
+      // 8. Footer Block
+      // Horizontal rules
+      ctx.strokeStyle = '#ffd6e7';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(80, 935);
+      ctx.lineTo(720, 935);
+      ctx.stroke();
+
+      // Add signature labels
+      ctx.fillStyle = '#8a5a68';
+      ctx.font = 'italic 15px Georgia, serif';
+      ctx.fillText('With Love,', 80, 975);
+
+      ctx.fillStyle = '#ff70ae';
+      ctx.font = 'bold 24px Georgia, serif';
+      ctx.fillText('Ardhi Satria', 80, 1010);
+
+      ctx.fillStyle = '#8a5a68';
+      ctx.font = '13px monospace';
+      ctx.fillText('8 JUNE 2026 ✨', 80, 1038);
+
+      // Place decorative seal inside footer download canvas
+      drawHeart(670, 990, 20, '#ff5293');
+      ctx.fillStyle = '#ff70ae';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('SEALED WITH', 670, 1030);
+      ctx.fillText('LOVE', 670, 1045);
+
+      // Perform download
+      const dataUrl = canvas.toDataURL('image/png');
+      const dlLink = document.createElement('a');
+      dlLink.href = dataUrl;
+      dlLink.download = 'ami-birthday-little-note.png';
+      dlLink.click();
+      
+      setGalleryToast('Little note saved beautifully as an image! 💌✨');
+    } catch (err) {
+      console.error(err);
+      setGalleryToast('Oops, could not download image.');
+    }
+  };
+
+  const downloadResearchJournalAsImage = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1000;
+      canvas.height = 5500;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.imageSmoothingEnabled = true;
+
+      // 2. Paper Header (Academic Style)
+      ctx.fillStyle = '#2d1a22';
+      ctx.font = 'bold 13px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('JOURNAL OF MARITAL & AMATORY SCIENCES  •  VOLUME 24  •  ISSUE 1', 500, 85);
+      
+      // Thin line separator for header
+      ctx.strokeStyle = '#2d1a22';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(80, 105);
+      ctx.lineTo(920, 105);
+      ctx.stroke();
+
+      // Research Journal Title Block
+      ctx.fillStyle = '#8a1f49'; // deep premium rose-crimson
+      ctx.font = 'bold 28px Georgia, serif';
+      ctx.fillText('RESEARCH JOURNAL', 500, 155);
+
+      let currentY = 210;
+      const leftMargin = 110;
+      const rightMargin = 110;
+      const lineLen = 1000 - leftMargin - rightMargin;
+
+      const drawText = (
+        textStr: string,
+        font: string,
+        fillStyle: string,
+        lineH: number,
+        align: 'left' | 'center' = 'left',
+        isBullet = false
+      ) => {
+        ctx.font = font;
+        ctx.fillStyle = fillStyle;
+        ctx.textAlign = align;
+
+        const words = textStr.split(' ');
+        let line = '';
+        const xPos = align === 'center' ? 500 : (isBullet ? leftMargin + 20 : leftMargin);
+
+        if (isBullet && align === 'left') {
+          ctx.fillText('•', leftMargin, currentY);
+        }
+
+        for (let n = 0; n < words.length; n++) {
+          const testLine = line + (line === '' ? '' : ' ') + words[n];
+          const metrics = ctx.measureText(testLine);
+          if (metrics.width > (isBullet ? lineLen - 20 : lineLen)) {
+            ctx.fillText(line, xPos, currentY);
+            line = words[n];
+            currentY += lineH;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, xPos, currentY);
+        currentY += lineH;
+      };
+
+      const drawDivider = () => {
+        ctx.strokeStyle = 'rgba(45, 26, 34, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(110, currentY);
+        ctx.lineTo(890, currentY);
+        ctx.stroke();
+        currentY += 25;
+      };
+
+      // Title Details
+      drawText('Title: Long-Term Observation of a Woman Named Dian Islami (Ami)', 'bold 22px Georgia, serif', '#2d1a22', 32, 'center');
+      currentY += 5;
+      drawText('Lead Researcher: Ardhi Satria    •    Date: 3 June 2026', 'italic 16px Georgia, serif', '#5f4c51', 24, 'center');
+      currentY += 15;
+      drawDivider();
+      currentY += 10;
+
+      // 1. Abstract
+      drawText('Abstract', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 5;
+      drawText('Penelitian ini merupakan studi lanjutan terhadap seorang perempuan bernama Dian Islami, yang lebih dikenal sebagai Ami, dan telah berlangsung selama beberapa tahun terakhir.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
+      currentY += 8;
+      drawText('Hasil penelitian menunjukkan bahwa subjek memiliki pengaruh positif yang signifikan terhadap kehidupan peneliti, termasuk peningkatan rasa tenang, kebahagiaan, rasa dicintai, dan optimisme terhadap masa depan.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
+      currentY += 8;
+      drawText('Temuan terbaru juga menunjukkan bahwa seluruh hipotesis yang pernah dibuat sebelumnya masih terbukti valid hingga saat ini.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
+      currentY += 20;
+      drawDivider();
+
+      // 2. Introduction
+      drawText('Introduction', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 10;
+      drawText('Sebelum mengenal Ami, peneliti memiliki beberapa asumsi tentang hidup dan tentang cinta.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 8;
+      drawText('Peneliti mengira bahwa mencintai seseorang berarti harus selalu khawatir kehilangan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 8;
+      drawText('Peneliti mengira bahwa effort sebesar yang selama ini diterima hanyalah sesuatu yang terjadi pada orang lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 8;
+      drawText('Peneliti juga mengira bahwa dirinya akan tetap menjadi orang yang cuek dan sulit mengekspresikan perasaan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 8;
+      drawText('Namun setelah Ami hadir, sebagian besar asumsi tersebut terbukti tidak akurat.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 20;
+      drawDivider();
+
+      // 3. Findings
+      drawText('Findings', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 15;
+
+      // Finding #1
+      drawText('Finding #1', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+      drawText('Ami adalah perempuan yang jauh lebih kuat dari yang ia sadari.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Selama masa observasi, ditemukan bahwa subjek mampu menghadapi banyak hal dalam hidup tanpa kehilangan kelembutan hatinya.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Ami mampu menanggung luka, kesedihan, dan berbagai tantangan dengan cara yang sering kali tidak diketahui orang lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Temuan ini menjadi salah satu alasan utama peneliti sangat mengagumi subjek.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 18;
+
+      // Finding #2
+      drawText('Finding #2', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+      drawText('Dicintai dengan setara ternyata nyata.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Sebelum penelitian dimulai, peneliti tidak memiliki banyak data mengenai hubungan yang saling mengusahakan satu sama lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Namun setelah mengenal Ami, ditemukan bahwa cinta tidak selalu harus membuat seseorang merasa takut ditinggalkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Cinta juga bisa terasa aman.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Cinta juga bisa terasa tenang.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Dan Ami adalah orang pertama yang membuat peneliti benar-benar memahami hal tersebut.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 18;
+
+      // Finding #3
+      drawText('Finding #3', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+      drawText('Ami selalu hadir, terutama saat keadaan sedang sulit.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Data menunjukkan bahwa ketika peneliti berada dalam masa yang tidak mudah, subjek secara konsisten memberikan dukungan, perhatian, dan rasa nyaman.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Bahkan pada saat-saat di mana Ami tidak bisa menyelesaikan masalah peneliti secara langsung, kehadirannya saja sudah cukup untuk membuat keadaan terasa lebih ringan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Temuan ini memperkuat keyakinan bahwa Ami bukan hanya hadir saat keadaan baik, tetapi juga memilih bertahan saat keadaan sulit.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 18;
+
+      // Finding #4
+      drawText('Finding #4', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+      drawText('Ami membuat peneliti ingin menjadi pribadi yang lebih baik.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Observasi menunjukkan adanya perubahan perilaku pada peneliti setelah mengenal subjek.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Peneliti menjadi lebih peduli terhadap hal-hal kecil.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Lebih memahami bahwa perhatian sederhana bisa memiliki makna yang besar.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Lebih berusaha menunjukkan rasa sayang dibanding hanya menyimpannya dalam pikiran.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Meskipun prosesnya masih berlangsung, seluruh perubahan tersebut berawal dari Ami.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 18;
+
+      // Finding #5
+      drawText('Finding #5', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+      drawText('Rasa kagum tidak berkurang seiring waktu.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Berdasarkan teori umum, banyak hal akan terasa biasa setelah dijalani cukup lama.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Namun teori tersebut tidak berlaku pada penelitian ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Semakin lama peneliti mengenal Ami, semakin banyak alasan untuk bersyukur karena dipertemukan dengannya.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 25;
+      drawDivider();
+
+      // 4. Discussion
+      drawText('Discussion', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 10;
+      drawText('Salah satu pertanyaan yang terus muncul selama penelitian berlangsung adalah: "What if we never met?"', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 10;
+      drawText('Setelah dilakukan berbagai simulasi and analisis, peneliti menyimpulkan bahwa hidup tetap akan berjalan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Namun hidup tersebut tidak akan memiliki Ami.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 12;
+
+      drawText('Tidak akan ada seseorang yang selalu ditunggu setiap minggu.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('Tidak akan ada telepon-telepon panjang di malam hari.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('Tidak akan ada cerita random yang selalu berhasil membuat hari terasa lebih menyenangkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('Tidak akan ada rasa nyaman yang selama ini menjadi bagian dari keseharian peneliti.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 12;
+
+      drawText('Dan mungkin, peneliti tidak akan pernah tahu bahwa dirinya bisa dicintai sedalam ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 25;
+      drawDivider();
+
+      // 5. Conclusion
+      drawText('Conclusion', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 10;
+      drawText('Pada usia 24 tahun, Dian Islami (Ami) tetap menjadi salah satu penemuan terbaik dalam hidup peneliti.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Seluruh data yang terkumpul menunjukkan bahwa subjek masih menjadi tempat pulang, tempat bercerita, tempat bertumbuh, dan orang yang paling ingin peneliti perjuangkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 25;
+      drawDivider();
+
+      // 6. Future Research
+      drawText('Future Research', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 10;
+      drawText('Penelitian akan terus dilanjutkan dengan fokus pada:', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 12;
+      drawText('More memories.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('More late-night conversations.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('More adventures.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('More dreams achieved together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('More birthdays celebrated together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 4;
+      drawText('And hopefully, one day, building a home together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+      currentY += 25;
+      drawDivider();
+
+      // 7. Final Statement
+      drawText('Final Statement', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+      currentY += 10;
+      drawText('Selamat ulang tahun yang ke-24, Ami. ❤️', 'bold 16px Georgia, serif', '#2d1a22', 24, 'left');
+      currentY += 10;
+      drawText('Terima kasih karena sudah bertahan sejauh ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Terima kasih karena sudah memilih untuk mencintai Ardhi dengan cara yang begitu tulus.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 4;
+      drawText('Terima kasih karena sudah menjadi alasan yang membuat Ardhi percaya bahwa cinta yang sehat, tenang, dan diperjuangkan bersama itu benar-benar ada.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 16;
+
+      drawText('Setelah seluruh data dikumpulkan, dianalisis, dan ditinjau ulang, tidak ditemukan satu pun bukti yang mampu membantah kesimpulan berikut:', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+      currentY += 20;
+
+      // Special box for Dian Islami adalah orang yang paling Ardhi syukuri
+      ctx.fillStyle = '#fff9f6';
+      ctx.fillRect(leftMargin, currentY, lineLen, 70);
+      ctx.strokeStyle = '#8a1f49';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(leftMargin, currentY, lineLen, 70);
+      
+      ctx.font = 'bold 16px Georgia, serif';
+      ctx.fillStyle = '#8a1f49';
+      ctx.textAlign = 'center';
+      ctx.fillText('Dian Islami adalah orang yang paling Ardhi syukuri dalam hidupnya.', 500, currentY + 41);
+      currentY += 105;
+
+      drawText('Dan dengan tingkat keyakinan 100%,', 'italic 16px Georgia, serif', '#2d1a22', 24, 'center');
+      currentY += 5;
+      
+      ctx.font = 'bold 22px Georgia, serif';
+      ctx.fillStyle = '#8a1f49';
+      ctx.fillText('Ardhi Satria sayang banget sama Ami.', 500, currentY + 10);
+      currentY += 45;
+
+      drawText('*End of Report.*', 'italic 13px Georgia, serif', '#8a5a68', 20, 'center');
+      currentY += 35;
+
+      // Double Signatures / Seal of Approval block
+      ctx.strokeStyle = '#2d1a22';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(110, currentY);
+      ctx.lineTo(890, currentY);
+      ctx.stroke();
+      currentY += 25;
+
+      // Left signature
+      ctx.font = 'bold 13px "Times New Roman", Times, serif';
+      ctx.fillStyle = '#2d1a22';
+      ctx.textAlign = 'left';
+      ctx.fillText('Lead Researcher Approval:', 120, currentY + 15);
+      
+      // Hand write font-like signature
+      ctx.font = 'italic 26px Georgia, serif';
+      ctx.fillStyle = '#8a1f49';
+      ctx.fillText('Ardhi Satria', 120, currentY + 48);
+
+      ctx.font = '12px "Times New Roman", Times, serif';
+      ctx.fillStyle = '#666';
+      ctx.fillText('Ardhi Satria, B.S. (Beloved Spouse)', 120, currentY + 74);
+
+      // Cute seal stamp in bottom right
+      ctx.save();
+      const sealX = 760;
+      const sealY = currentY + 10;
+      ctx.beginPath();
+      ctx.arc(sealX, sealY + 40, 45, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(239, 68, 111, 0.45)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(sealX, sealY + 40, 41, 0, Math.PI * 2);
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.font = 'bold 10px Courier New, Courier, monospace';
+      ctx.fillStyle = 'rgba(239, 68, 111, 0.7)';
+      ctx.textAlign = 'center';
+      ctx.fillText('APPROVED', sealX, sealY + 40);
+      ctx.fillText('AMI\'S DAY', sealX, sealY + 53);
+      ctx.fillText('8 JUN 2026', sealX, sealY + 66);
+
+      // Calculate dynamic final height to hug the actual drawn content perfectly with balanced margins
+      const finalHeight = Math.ceil(sealY + 140);
+
+      // Create final canvas that matches the exact content height
+      const finalCanvas = document.createElement('canvas');
+      finalCanvas.width = 1000;
+      finalCanvas.height = finalHeight;
+      const finalCtx = finalCanvas.getContext('2d');
+      if (!finalCtx) return;
+
+      finalCtx.imageSmoothingEnabled = true;
+
+      // 1. Clean ivory academic paper background texture
+      finalCtx.fillStyle = '#fcfbf7';
+      finalCtx.fillRect(0, 0, 1000, finalHeight);
+
+      // Cute faint grid (academic watermark)
+      finalCtx.fillStyle = 'rgba(138, 90, 104, 0.02)';
+      for (let x = 0; x < 1000; x += 40) {
+        finalCtx.fillRect(x, 0, 1, finalHeight);
+      }
+      for (let y = 0; y < finalHeight; y += 40) {
+        finalCtx.fillRect(0, y, 1000, 1);
+      }
+
+      // Outer margin borders relative to finalHeight
+      finalCtx.strokeStyle = '#2d1a22';
+      finalCtx.lineWidth = 1.5;
+      finalCtx.strokeRect(40, 40, 920, finalHeight - 80); // dynamic outer border matching 40px margin
+
+      finalCtx.strokeStyle = 'rgba(45, 26, 34, 0.2)';
+      finalCtx.lineWidth = 1;
+      finalCtx.strokeRect(50, 50, 900, finalHeight - 100); // dynamic inner thin line matching 50px margin
+
+      // Copy the drawn content from the transparent temp canvas on top
+      finalCtx.drawImage(canvas, 0, 0, 1000, finalHeight, 0, 0, 1000, finalHeight);
+
+      // Perform direct download of the image
+      const dataUrl = finalCanvas.toDataURL('image/png');
+      const dlLink = document.createElement('a');
+      dlLink.href = dataUrl;
+      dlLink.download = 'ami-long-term-research-journal.png';
+      dlLink.click();
+      
+      setGalleryToast('Special Research Journal downloaded as image! 📄🎓✨');
+    } catch (err) {
+      console.error(err);
+      setGalleryToast('Oops, could not construct the journal image.');
+    }
+  };
+
+  const downloadResearchJournalAsText = () => {
+    try {
+      const text = `# Research Journal
+
+**Title:** Long-Term Observation of a Woman Named Dian Islami (Ami)
+
+**Lead Researcher:** Ardhi Satria
+
+**Date:** 3 June 2026
+
+---
+
+## Abstract
+
+Penelitian ini merupakan studi lanjutan terhadap seorang perempuan bernama **Dian Islami**, yang lebih dikenal sebagai **Ami**, dan telah berlangsung selama beberapa tahun terakhir.
+
+Hasil penelitian menunjukkan bahwa subjek memiliki pengaruh positif yang signifikan terhadap kehidupan peneliti, termasuk peningkatan rasa tenang, kebahagiaan, rasa dicintai, dan optimisme terhadap masa depan.
+
+Temuan terbaru juga menunjukkan bahwa seluruh hipotesis yang pernah dibuat sebelumnya masih terbukti valid hingga saat ini.
+
+---
+
+## Introduction
+
+Sebelum mengenal Ami, peneliti memiliki beberapa asumsi tentang hidup dan tentang cinta.
+
+Peneliti mengira bahwa mencintai seseorang berarti harus selalu khawatir kehilangan.
+
+Peneliti mengira bahwa effort sebesar yang selama ini diterima hanyalah sesuatu yang terjadi pada orang lain.
+
+Peneliti juga mengira bahwa dirinya akan tetap menjadi orang yang cuek dan sulit mengekspresikan perasaan.
+
+Namun setelah Ami hadir, sebagian besar asumsi tersebut terbukti tidak akurat.
+
+---
+
+## Findings
+
+### Finding #1
+
+**Ami adalah perempuan yang jauh lebih kuat dari yang ia sadari.**
+
+Selama masa observasi, ditemukan bahwa subjek mampu menghadapi banyak hal dalam hidup tanpa kehilangan kelembutan hatinya.
+
+Ami mampu menanggung luka, kesedihan, dan berbagai tantangan dengan cara yang sering kali tidak diketahui orang lain.
+
+Temuan ini menjadi salah satu alasan utama peneliti sangat mengagumi subjek.
+
+---
+
+### Finding #2
+
+**Dicintai dengan setara ternyata nyata.**
+
+Sebelum penelitian dimulai, peneliti tidak memiliki banyak data mengenai hubungan yang saling mengusahakan satu sama lain.
+
+Namun setelah mengenal Ami, ditemukan bahwa cinta tidak selalu harus membuat seseorang merasa takut ditinggalkan.
+
+Cinta juga bisa terasa aman.
+
+Cinta juga bisa terasa tenang.
+
+Dan Ami adalah orang pertama yang membuat peneliti benar-benar memahami hal tersebut.
+
+---
+
+### Finding #3
+
+**Ami selalu hadir, terutama saat keadaan sedang sulit.**
+
+Data menunjukkan bahwa ketika peneliti berada dalam masa yang tidak mudah, subjek secara konsisten memberikan dukungan, perhatian, dan rasa nyaman.
+
+Bahkan pada saat-saat di mana Ami tidak bisa menyelesaikan masalah peneliti secara langsung, kehadirannya saja sudah cukup untuk membuat keadaan terasa lebih ringan.
+
+Temuan ini memperkuat keyakinan bahwa Ami bukan hanya hadir saat keadaan baik, tetapi juga memilih bertahan saat keadaan sulit.
+
+---
+
+### Finding #4
+
+**Ami membuat peneliti ingin menjadi pribadi yang lebih baik.**
+
+Observasi menunjukkan adanya perubahan perilaku pada peneliti setelah mengenal subjek.
+
+Peneliti menjadi lebih peduli terhadap hal-hal kecil.
+
+Lebih memahami bahwa perhatian sederhana bisa memiliki makna yang besar.
+
+More berusaha menunjukkan rasa sayang dibanding hanya menyimpannya dalam pikiran.
+
+Meskipun prosesnya masih berlangsung, seluruh perubahan tersebut berawal dari Ami.
+
+---
+
+### Finding #5
+
+**Rasa kagum tidak berkurang seiring waktu.**
+
+Berdasarkan teori umum, banyak hal akan terasa biasa setelah dijalani cukup lama.
+
+Namun teori tersebut tidak berlaku pada penelitian ini.
+
+Semakin lama peneliti mengenal Ami, semakin banyak alasan untuk bersyukur karena dipertemukan dengannya.
+
+---
+
+## Discussion
+
+Salah satu pertanyaan yang terus muncul selama penelitian berlangsung adalah:
+
+**"What if we never met?"**
+
+Setelah dilakukan berbagai simulasi dan analisis, peneliti menyimpulkan bahwa hidup tetap akan berjalan.
+
+Namun hidup tersebut tidak akan memiliki Ami.
+
+Tidak akan ada seseorang yang selalu ditunggu setiap minggu.
+
+Tidak akan ada telepon-telepon panjang di malam hari.
+
+Tidak akan ada cerita random yang selalu berhasil membuat hari terasa lebih menyenangkan.
+
+Tidak akan ada rasa nyaman yang selama ini menjadi bagian dari keseharian peneliti.
+
+Dan mungkin, peneliti tidak akan pernah tahu bahwa dirinya bisa dicintai sedalam ini.
+
+---
+
+## Conclusion
+
+Pada usia 24 tahun, **Dian Islami (Ami)** tetap menjadi salah satu penemuan terbaik dalam hidup peneliti.
+
+Seluruh data yang terkumpul menunjukkan bahwa subjek masih menjadi tempat pulang, tempat bercerita, tempat bertumbuh, dan orang yang paling ingin peneliti perjuangkan.
+
+---
+
+## Future Research
+
+Penelitian akan terus dilanjutkan dengan fokus pada:
+
+* More memories.
+* More late-night conversations.
+* More adventures.
+* More dreams achieved together.
+* More birthdays celebrated together.
+* And hopefully, one day, building a home together.
+
+---
+
+## Final Statement
+
+Selamat ulang tahun yang ke-24, Ami. ❤️
+
+Terima kasih karena sudah bertahan sejauh ini.
+
+Terima kasih karena sudah memilih untuk mencintai Ardhi dengan cara yang begitu tulus.
+
+Terima kasih karena sudah menjadi alasan yang membuat Ardhi percaya bahwa cinta yang sehat, tenang, dan diperjuangkan bersama itu benar-benar ada.
+
+Setelah seluruh data dikumpulkan, dianalisis, dan ditinjau ulang, tidak ditemukan satu pun bukti yang mampu membantah kesimpulan berikut:
+
+### **Dian Islami adalah orang yang paling Ardhi syukuri dalam hidupnya.**
+
+Dan dengan tingkat keyakinan 100%,
+
+### **Ardhi Satria sayang banget sama Ami.**
+
+*End of Report.*`;
+
+      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const dlLink = document.createElement('a');
+      dlLink.href = url;
+      dlLink.download = 'ami-long-term-research-journal.md';
+      dlLink.click();
+      URL.revokeObjectURL(url);
+      setGalleryToast('Special Research Journal downloaded as text file! 📝✨');
+    } catch (err) {
+      console.error(err);
+      setGalleryToast('Oops, could not download text file.');
+    }
+  };
+
   const handleUploadToSupabase = async () => {
     if (!capturedPhoto || isUploading) return;
     
@@ -690,6 +1858,7 @@ export default function App() {
   if (currentView === 'photobooth') {
     return (
       <div className="min-h-[100dvh] bg-[#fff5f8] text-[#4A2230] relative select-none w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto">
+        <FloatingHearts />
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Intro Popup screen (displays when camera is NOT open yet) */}
@@ -1231,7 +2400,7 @@ export default function App() {
       onScroll={handlePageScroll}
       className={`h-[100dvh] md:snap-y md:snap-mandatory scroll-smooth bg-[#fff5f8] text-[#4A2230] overflow-x-hidden relative selection:bg-[#ff70ae]/30 ${!invitationOpened ? 'overflow-y-hidden' : 'overflow-y-scroll'}`}
     >
-      {/* Background Parallax Elements */}
+      <FloatingHearts />
       <div className="fixed inset-0 z-0 pointer-events-none">
         {bottomTrees.map((item, index) => (
           <div
@@ -1349,20 +2518,52 @@ export default function App() {
             For Ami ✨
           </span>
           <h1 className="text-3xl md:text-5xl lg:text-7xl font-serif leading-tight">
-            Someone planned something special for your birthday.
+            Something special is waiting for you.
           </h1>
           <p className="text-base md:text-lg text-[#8A5A68] font-light max-w-xs mx-auto leading-relaxed">
-            A little surprise has been prepared just for you. Open it when you're ready. 💕
+            A little birthday surprise has been prepared just for you. Open it whenever you're ready. 💕
           </p>
-          <button
+          <motion.button
             onClick={handleOpenInvitation}
-            className="group relative h-12 px-[16px] mx-[16px] my-[12px] inline-flex items-center justify-center bg-[#ff70ae] text-white rounded-full font-medium transition-all hover:scale-105 active:scale-95 shadow-xl shadow-[#ff70ae]/20 overflow-hidden text-sm md:text-base"
+            onMouseEnter={() => setIsSurpriseButtonHovered(true)}
+            onMouseLeave={() => setIsSurpriseButtonHovered(false)}
+            animate={isSurpriseButtonHovered ? {
+              scale: 1.12,
+              y: -5,
+              boxShadow: '0 25px 50px -12px rgba(255, 112, 174, 0.7)'
+            } : {
+              scale: [1, 1.05, 1],
+              y: 0,
+              boxShadow: [
+                '0 10px 25px -5px rgba(255, 112, 174, 0.2)',
+                '0 10px 30px 5px rgba(255, 112, 174, 0.44)',
+                '0 10px 25px -5px rgba(255, 112, 174, 0.2)'
+              ]
+            }}
+            transition={isSurpriseButtonHovered ? {
+              type: "spring",
+              stiffness: 400,
+              damping: 15
+            } : {
+              scale: {
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              },
+              boxShadow: {
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }
+            }}
+            whileActive={{ scale: 0.95, y: 0 }}
+            className="group relative h-12 px-[16px] mx-[16px] my-[12px] inline-flex items-center justify-center bg-[#ff70ae] text-white rounded-full font-medium transition-[background-color] shadow-xl overflow-hidden text-sm md:text-base cursor-pointer"
           >
             <span className="relative z-10 flex items-center gap-2">
               Open Your Surprise 💗
             </span>
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-          </button>
+          </motion.button>
         </motion.div>
 
         <AnimatePresence>
@@ -1795,12 +2996,12 @@ export default function App() {
             </div>
             <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif text-[#4A2230] leading-snug font-bold">Our Album of Love</h2>
             <p className="text-[9px] md:text-xs lg:text-[13px] text-[#8A5A68] max-w-md mx-auto leading-normal">
-              Every sweet moment shared, hand in hand. Just waiting for our cute pictures to fill these frames tonight! ✨
+              Every sweet moment shared, hand in hand. Just waiting for our cute pictures to fill these frames today! ✨
             </p>
           </div>
 
           {/* Polaroid Container - Horizontal Scroll on Mobile / Fixed Responsive Grid on Desktop in Portrait 2:3 Aspect ratio */}
-          <div className="flex lg:grid lg:grid-cols-3 gap-4 md:gap-5 lg:gap-5 xl:gap-6 w-full max-w-3xl xl:max-w-4xl px-6 md:px-8 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 select-none items-center pt-2 justify-start lg:justify-center snap-x scrollbar-none">
+          <div className="flex lg:grid lg:grid-cols-3 gap-4 md:gap-5 lg:gap-5 xl:gap-6 w-full max-w-3xl xl:max-w-4xl px-6 md:px-8 overflow-x-auto lg:overflow-visible pb-4 lg:pb-0 select-none items-center pt-2 justify-start lg:justify-center snap-x snap-mandatory scrollbar-none scroll-px-6 md:scroll-px-8">
             {[
               { id: 'ours-0', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%206.png', title: 'Perfect Days 🌸', subtitle: 'Warm Sunshine', rotate: 'lg:-rotate-2' },
               { id: 'ours-1', src: 'https://rglsaquiaoptymkxbwdf.supabase.co/storage/v1/object/public/image-asset/memories/Ours%201.png', title: 'Cozy Chats ☕', subtitle: 'Pure Happiness', rotate: 'lg:rotate-1' },
@@ -1816,7 +3017,7 @@ export default function App() {
                 transition={{ delay: i * 0.04, duration: 0.4 }}
                 whileHover={{ y: -6, scale: 1.04 }}
                 onClick={() => setGalleryToast(`Beautiful moment: "${card.title}" 🥺💕`)}
-                className={`bg-white p-2 sm:p-2.5 lg:p-2.5 rounded-xl md:rounded-2xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} w-[62vw] xs:w-[58vw] sm:w-[45vw] md:w-[32vw] lg:w-auto h-auto lg:h-[25vh] xl:h-[28vh] aspect-[2/3] shrink-0 snap-center`}
+                className={`bg-white p-2 sm:p-2.5 lg:p-2.5 rounded-xl md:rounded-2xl shadow-md hover:shadow-xl border border-pink-50 relative cursor-pointer select-none transition-all duration-300 ${card.rotate} w-[62vw] xs:w-[58vw] sm:w-[45vw] md:w-[32vw] lg:w-full lg:h-auto lg:aspect-square aspect-[2/3] shrink-0 snap-center`}
               >
                 {/* Washi Tape Ribbon Effect */}
                 <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-8 h-3.5 md:w-16 md:h-4 bg-[#ff70ae]/15 backdrop-blur-[2px] border-x border-[#ff70ae]/10 rounded-sm rotate-2 flex items-center justify-center text-[5px] md:text-[6px] font-bold text-[#ff70ae]/70 tracking-wider">
@@ -1848,6 +3049,40 @@ export default function App() {
         </motion.div>
       </section>
 
+      {/* VIDEO SECTION */}
+      <section id="video-section" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex flex-col items-center justify-center overflow-hidden px-4 py-8 md:py-4">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-4xl flex flex-col items-center justify-center gap-4 sm:gap-6 lg:gap-8 min-h-full md:h-full"
+        >
+          {/* Header */}
+          <div className="text-center space-y-1.5 md:space-y-2 px-4 select-none">
+            <div>
+              <span className="text-[9px] md:text-xs font-bold tracking-[0.2em] text-[#ff70ae] uppercase bg-pink-50/80 px-4 py-1 rounded-full border border-pink-100/30 shadow-sm">
+                Sweet Video Diaries 🎞️
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif text-[#4A2230] leading-snug font-bold">Our Sweetest Memories</h2>
+            <p className="text-[9px] md:text-xs lg:text-[13px] text-[#8A5A68] max-w-md mx-auto leading-normal">
+              A collection of our favorite laughs, cute walks, and beautiful moments captured in video. Turn on the volume and press play! 💖
+            </p>
+          </div>
+
+          {/* Custom Memory Video Player */}
+          <MemoryVideoPlayer
+            videoSrc={memoryVideo}
+            onPlayStateChange={(playing) => {
+              // Pause background music when video plays, resume background music when video pauses/stops
+              setIsPlaying(!playing);
+            }}
+            memoryVideoRef={memoryVideoRef}
+          />
+        </motion.div>
+      </section>
+
       {/* LETTER SECTION */}
       <section id="letter" className="relative z-10 min-h-[100dvh] md:h-[100dvh] md:snap-start flex items-center justify-center px-6 py-12 md:py-0 overflow-hidden">
         <div className="w-full max-w-2xl mx-auto flex items-center justify-center">
@@ -1862,25 +3097,56 @@ export default function App() {
             {/* Subtle vintage envelope style background textures */}
             <div className="absolute inset-0 bg-[radial-gradient(#ffd5e5_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.14] pointer-events-none" />
             
-            {/* Interactive Love Stamp in top right corner on desktop */}
-            <div className="absolute top-6 right-6 hidden md:block">
-              <motion.div 
-                whileHover={{ scale: 1.12, rotate: 8 }}
-                onClick={triggerConfetti}
-                className="w-16 h-20 bg-white border-2 border-dashed border-[#ff70ae]/50 p-1 rounded-sm shadow-md flex flex-col items-center justify-center cursor-pointer select-none relative"
-                title="Seal of Love - Click for magic! 💕"
-              >
-                {/* Wavy scalloped stamp border details */}
-                <div className="absolute -inset-[3px] border border-dotted border-pink-200 pointer-events-none rounded-sm" />
-                <div className="w-9 h-9 bg-pink-50 rounded-full flex items-center justify-center border border-pink-100 text-[#ff70ae]">
-                  <Heart className="w-4 h-4 fill-current text-[#ff70ae] animate-pulse" />
-                </div>
-                <span className="text-[7px] font-mono font-bold text-[#ff70ae]/80 uppercase mt-2.5 tracking-wider">Love Stamp</span>
-                <span className="text-[5px] font-mono text-[#8A5A68]/60 uppercase tracking-widest mt-0.5">8 JUN 2026</span>
-              </motion.div>
+            {/* Cascade of Falling Hearts */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+              <AnimatePresence>
+                {fallingHearts.map((heart) => (
+                  <motion.div
+                    key={heart.id}
+                    initial={{ top: "-10%", left: `${heart.x}%`, opacity: 0, scale: 0.6, rotate: heart.rotation }}
+                    animate={{ 
+                      top: "105%",
+                      x: [0, Math.random() * 30 - 15, Math.random() * 50 - 25],
+                      opacity: [0, 1, 1, 0], 
+                      scale: [0.6, 1.1, 1, 0.6],
+                      rotate: heart.rotation + (Math.random() > 0.5 ? 60 : -60)
+                    }}
+                    exit={{ opacity: 0 }}
+                    transition={{ 
+                      duration: heart.duration, 
+                      ease: "linear",
+                      opacity: { times: [0, 0.1, 0.9, 1] },
+                      scale: { times: [0, 0.1, 0.9, 1] }
+                    }}
+                    className="absolute select-none"
+                    style={{ 
+                      fontSize: `${heart.size}px`,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {heart.emoji}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
+            
+            {/* Interactive Love Stamp in top right corner on desktop - absolute positioned to ignore layout */}
+            <motion.div 
+              whileHover={{ scale: 1.12, rotate: 8 }}
+              onClick={triggerConfetti}
+              className="absolute top-6 right-6 hidden md:flex w-16 h-20 bg-white border-2 border-dashed border-[#ff70ae]/50 p-1 rounded-sm shadow-md flex-col items-center justify-center cursor-pointer select-none z-20"
+              title="Seal of Love - Click for magic! 💕"
+            >
+              {/* Wavy scalloped stamp border details */}
+              <div className="absolute -inset-[3px] border border-dotted border-pink-200 pointer-events-none rounded-sm" />
+              <div className="w-9 h-9 bg-pink-50 rounded-full flex items-center justify-center border border-pink-100 text-[#ff70ae]">
+                <Heart className="w-4 h-4 fill-current text-[#ff70ae] animate-pulse" />
+              </div>
+              <span className="text-[7px] font-mono font-bold text-[#ff70ae]/80 uppercase mt-2.5 tracking-wider">Love Stamp</span>
+              <span className="text-[5px] font-mono text-[#8A5A68]/60 uppercase tracking-widest mt-0.5">8 JUN 2026</span>
+            </motion.div>
 
-              <div className="space-y-3 md:space-y-6 relative z-10 pr-0 md:pr-14">
+              <div className="space-y-3 md:space-y-6 relative z-10 pr-0 md:pr-2">
                 <div className="space-y-1.5 md:space-y-3.5">
                   <div className="flex items-center gap-2">
                     <Flower className="w-4 h-4 text-[#ff70ae] animate-spin-slow" />
@@ -1924,26 +3190,46 @@ export default function App() {
 
                 {/* Sender signature block */}
                 <div className="pt-4 md:pt-6 border-t border-[#ffd6e7] flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] md:text-xs italic text-[#8A5A68] mb-0.5">With Love,</p>
-                    <p className="text-base md:text-xl font-serif text-[#ff70ae] font-semibold tracking-wide">Ardhi Satria</p>
+                  <div 
+                    onMouseEnter={() => setIsHoveringSignature(true)}
+                    onMouseLeave={() => setIsHoveringSignature(false)}
+                    className="cursor-pointer group/signature transition-all duration-300 relative py-1 px-2 -mx-2 rounded-lg hover:bg-pink-50/50"
+                  >
+                    <p className="text-[10px] md:text-xs italic text-[#8A5A68] mb-0.5 group-hover/signature:text-[#ff70ae] transition-colors">With Love,</p>
+                    <p className="text-base md:text-xl font-serif text-[#ff70ae] font-semibold tracking-wide transition-all duration-300 group-hover/signature:scale-[1.02] origin-left">Ardhi Satria</p>
                     <p className="text-[8px] md:text-xs tracking-widest uppercase text-[#8A5A68]/70 font-mono mt-0.5">8 June 2026 ✨</p>
                   </div>
                 
                 {/* Clickable wax seal or shiny heart interactive stamp at the bottom corner */}
-                <div className="flex flex-col items-center gap-1">
-                  <motion.button
-                    whileHover={{ scale: 1.15, rotate: -12 }}
-                    whileActive={{ scale: 0.9 }}
-                    onClick={triggerConfetti}
-                    className="w-12 h-12 bg-gradient-to-tr from-[#ff5293] to-[#ff70ae] hover:from-[#ff3a81] hover:to-[#ff5c9e] rounded-full flex items-center justify-center shadow-lg shadow-[#ff5293]/30 border-2 border-white relative cursor-pointer group"
-                    title="Press to stamp love!"
-                  >
-                    <Heart className="w-5 h-5 fill-rose-100 text-white group-hover:scale-110 transition-transform" />
-                    {/* Ring animation on hover */}
-                    <span className="absolute inset-x-0 inset-y-0 rounded-full border border-pink-400 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300 pointer-events-none" />
-                  </motion.button>
-                  <span className="text-[7px] font-mono font-bold tracking-widest text-[#8A5A68] uppercase">Seal & Sparkle ✨</span>
+                <div className="flex items-center gap-4">
+                  {/* Download button */}
+                  <div className="flex flex-col items-center gap-1">
+                    <motion.button
+                      whileHover={{ scale: 1.15, y: -2 }}
+                      whileActive={{ scale: 0.9 }}
+                      onClick={() => setShowDownloadChoice(true)}
+                      className="w-12 h-12 bg-white hover:bg-pink-50 text-[#ff70ae] rounded-full flex items-center justify-center shadow-md border border-pink-200 relative cursor-pointer group"
+                      title="Download options! 💌"
+                    >
+                      <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    </motion.button>
+                    <span className="text-[7px] font-mono font-bold tracking-widest text-[#8A5A68] uppercase">Save Note 💌</span>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <motion.button
+                      whileHover={{ scale: 1.15, rotate: -12 }}
+                      whileActive={{ scale: 0.9 }}
+                      onClick={triggerConfetti}
+                      className="w-12 h-12 bg-gradient-to-tr from-[#ff5293] to-[#ff70ae] hover:from-[#ff3a81] hover:to-[#ff5c9e] rounded-full flex items-center justify-center shadow-lg shadow-[#ff5293]/30 border-2 border-white relative cursor-pointer group"
+                      title="Press to stamp love!"
+                    >
+                      <Heart className="w-5 h-5 fill-rose-100 text-white group-hover:scale-110 transition-transform" />
+                      {/* Ring animation on hover */}
+                      <span className="absolute inset-x-0 inset-y-0 rounded-full border border-pink-400 opacity-0 group-hover:opacity-100 group-hover:scale-125 transition-all duration-300 pointer-events-none" />
+                    </motion.button>
+                    <span className="text-[7px] font-mono font-bold tracking-widest text-[#8A5A68] uppercase">Seal & Sparkle ✨</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2515,6 +3801,125 @@ export default function App() {
           )}
         </AnimatePresence>
       </section>
+
+      {/* Choice Download Modal Overlay */}
+      <AnimatePresence>
+        {showDownloadChoice && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[999] flex items-center justify-center p-4"
+            onClick={() => setShowDownloadChoice(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full border border-pink-100 shadow-2xl relative overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Background accent glow */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/5 rounded-full blur-2xl pointer-events-none" />
+
+              {/* Close button */}
+              <button
+                onClick={() => setShowDownloadChoice(false)}
+                className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-50 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-6">
+                {/* Modal Title */}
+                <div className="text-center space-y-1">
+                  <div className="inline-flex p-3 bg-pink-50 text-[#ff70ae] rounded-full hover:scale-110 transition-transform">
+                    <Download className="w-6 h-6 animate-bounce" />
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-serif text-[#4A2230] font-bold">
+                    Save Special Notes 💮
+                  </h3>
+                  <p className="text-xs md:text-sm text-[#8A5A68]">
+                    Choose which keepsake you would like to download!
+                  </p>
+                </div>
+
+                {/* Option 1: The Sweet Birthday Note */}
+                <div className="bg-[#fffbfb] hover:bg-[#fff9fa] border border-[#ffe0e6] rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-start gap-4 transition-all hover:shadow-md group">
+                  <div className="bg-[#fff0f4] p-3 rounded-xl text-[#ff70ae] group-hover:scale-110 transition-transform">
+                    <Flower className="w-6 h-6 animate-spin-slow" />
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    <div>
+                      <h4 className="font-bold text-sm md:text-base text-[#4A2230] flex items-center gap-1.5">
+                        The Sweet Birthday Note 💌
+                      </h4>
+                      <p className="text-xs text-[#8A5A68] leading-relaxed">
+                        A beautiful keepsake card of the letter shown on screen, formatted with decorative borders, corner hearts, and a custom love stamp.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        downloadLetterAsImage();
+                        setShowDownloadChoice(false);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Download Card (PNG)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Option 2: The Secret Research Journal */}
+                <div className="bg-[#fcfcf9] hover:bg-[#fafaf4] border border-[#e8ebd3] rounded-2xl p-4 md:p-5 flex flex-col md:flex-row items-start gap-4 transition-all hover:shadow-md group">
+                  <div className="bg-[#f5f5f0] p-3 rounded-xl text-[#8a1f49] group-hover:scale-110 transition-transform">
+                    <Gift className="w-6 h-6 text-[#ff70ae]" />
+                  </div>
+                  <div className="space-y-3 flex-1">
+                    <div>
+                      <h4 className="font-bold text-sm md:text-base text-[#2d1a22] flex items-center gap-1.5">
+                        Official Research Journal 📄 <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-mono font-bold animate-pulse">SECRET</span>
+                      </h4>
+                      <p className="text-xs text-stone-600 leading-relaxed font-sans">
+                        A comprehensive, lighthearted scientific-style journal paper entitled <span className="italic font-medium">"Long-Term Observation of a Woman Named Dian Islami (Ami)"</span>. Complete with abstract, data findings, research discussion, researcher signature, and dynamic stamps.
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2.5">
+                      <button
+                        onClick={() => {
+                          downloadResearchJournalAsImage();
+                          setShowDownloadChoice(false);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#2d1a22] hover:bg-stone-850 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Paper Image (PNG)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          downloadResearchJournalAsText();
+                          setShowDownloadChoice(false);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#fafaf4] hover:bg-[#f3f3e8] text-[#2d1a22] border border-[#e4ebd3] text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Heart className="w-3.5 h-3.5 fill-[#ff70ae] text-[#ff70ae]" />
+                        Download Text File (.md)
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Controls */}
       <div className="fixed bottom-8 left-8 z-[60]">
