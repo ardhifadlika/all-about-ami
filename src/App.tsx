@@ -6,6 +6,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
+import InteractiveCursor from './components/InteractiveCursor';
 import { 
   Heart, 
   Calendar, 
@@ -4023,6 +4024,9 @@ Dan dengan tingkat keyakinan 100%,
           <MusicSlash className="w-5 h-5 md:w-6 md:h-6" />
         )}
       </button>
+
+      {/* Global Interactive Cursor for Desktop */}
+      <InteractiveCursor />
     </div>
   );
 
