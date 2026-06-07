@@ -2734,7 +2734,7 @@ Dan dengan tingkat keyakinan 100%,
               </div>
             </div>
 
-            <p className="text-xs md:text-sm text-[#8A5A68] italic">Someone planned a special birthday day for you ❤️</p>
+            <p id="invitation-personal-note" className="text-xs md:text-sm text-[#8A5A68] italic">I have planned a special birthday for you 💗</p>
           </motion.div>
 
           {/* Dynamic Polaroid Slideshow Card (Right) */}
