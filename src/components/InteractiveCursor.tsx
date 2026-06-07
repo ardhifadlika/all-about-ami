@@ -14,6 +14,7 @@ export default function InteractiveCursor() {
   const [isMobile, setIsMobile] = useState(true);
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
   const [bubbles, setBubbles] = useState<LoveBubble[]>([]);
+  const [hideText, setHideText] = useState(false);
   
   const trailText = "Happy birthday sayang ❤️";
   const [typedLength, setTypedLength] = useState(0);
@@ -86,6 +87,12 @@ export default function InteractiveCursor() {
       const { clientX, clientY } = e;
       setMousePos({ x: clientX, y: clientY });
 
+      // Check if hovering over any element designated to hide cursor text
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        setHideText(!!target.closest('.hover-hide-cursor-text'));
+      }
+
       // Calculate distance moved from last bubble spawn position
       const dx = clientX - lastSpawnPos.current.x;
       const dy = clientY - lastSpawnPos.current.y;
@@ -152,24 +159,35 @@ export default function InteractiveCursor() {
       </AnimatePresence>
 
       {/* Elegant, clean horizontal typewriter text box with smooth spring following custom cursors */}
-      <motion.div
-        animate={{ x: mousePos.x + 18, y: mousePos.y + 12 }}
-        transition={{ type: "spring", stiffness: 220, damping: 22 }}
-        className="absolute pointer-events-none select-none text-[11px] font-semibold tracking-wide filter drop-shadow-md flex items-center bg-white/90 backdrop-blur-[2px] px-2.5 py-1 rounded-full border border-pink-100 shadow-[0_2px_10px_rgba(255,182,193,0.3)] whitespace-nowrap text-[#ff5293]"
-        style={{
-          fontFamily: '"Space Grotesk", sans-serif',
-          left: 0,
-          top: 0,
-        }}
-      >
-        <span className="mr-0.5">{currentTypedText}</span>
-        {/* Blinking typewriter cursor bar */}
-        <motion.span
-          animate={{ opacity: [1, 0, 1] }}
-          transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
-          className="w-[1.5px] h-3 bg-[#ff5293] inline-block ml-0.5"
-        />
-      </motion.div>
+      <AnimatePresence>
+        {!hideText && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1, x: mousePos.x + 18, y: mousePos.y + 12 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ 
+              opacity: { duration: 0.25 },
+              scale: { duration: 0.25 },
+              x: { type: "spring", stiffness: 220, damping: 22 },
+              y: { type: "spring", stiffness: 220, damping: 22 }
+            }}
+            className="absolute pointer-events-none select-none text-[11px] font-semibold tracking-wide filter drop-shadow-md flex items-center bg-white/90 backdrop-blur-[2px] px-2.5 py-1 rounded-full border border-pink-100 shadow-[0_2px_10px_rgba(255,182,193,0.3)] whitespace-nowrap text-[#ff5293]"
+            style={{
+              fontFamily: '"Space Grotesk", sans-serif',
+              left: 0,
+              top: 0,
+            }}
+          >
+            <span className="mr-0.5">{currentTypedText}</span>
+            {/* Blinking typewriter cursor bar */}
+            <motion.span
+              animate={{ opacity: [1, 0, 1] }}
+              transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+              className="w-[1.5px] h-3 bg-[#ff5293] inline-block ml-0.5"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Custom Core Cursor Dot with Glowing Heart */}
       <div 

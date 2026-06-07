@@ -6,6 +6,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
+import { jsPDF } from 'jspdf';
 import InteractiveCursor from './components/InteractiveCursor';
 import { 
   Heart, 
@@ -212,6 +213,36 @@ function MemoryVideoPlayer({ videoSrc, onPlayStateChange, memoryVideoRef }: Memo
   const toggleFullscreen = () => {
     const video = memoryVideoRef.current;
     if (!video) return;
+
+    // For iOS devices, webkitEnterFullscreen is required on the video element directly
+    if ((video as any).webkitEnterFullscreen) {
+      try {
+        (video as any).webkitEnterFullscreen();
+        return;
+      } catch (err) {
+        console.warn("webkitEnterFullscreen was blocked or failed, trying standard fullscreen:", err);
+      }
+    }
+
+    // Try full screen on the container first so custom styled overlays remain visible
+    const container = video.parentElement;
+    if (container) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+        return;
+      } else if ((container as any).webkitRequestFullscreen) {
+        (container as any).webkitRequestFullscreen();
+        return;
+      } else if ((container as any).mozRequestFullScreen) {
+        (container as any).mozRequestFullScreen();
+        return;
+      } else if ((container as any).msRequestFullscreen) {
+        (container as any).msRequestFullscreen();
+        return;
+      }
+    }
+
+    // Direct fallback to video element standard request
     if (video.requestFullscreen) {
       video.requestFullscreen();
     } else if ((video as any).webkitRequestFullscreen) {
@@ -613,6 +644,10 @@ export default function App() {
   const handleOpenInvitation = () => {
     setIsOpening(true);
     setIsPlaying(true);
+    if (audioRef.current) {
+      const baseUrl = 'https://www.youtube.com/embed/WCce-3XMdJs';
+      audioRef.current.src = `${baseUrl}?autoplay=1&loop=1&playlist=WCce-3XMdJs&enablejsapi=1&playsinline=1`;
+    }
     triggerIntenseBirthdayConfetti();
     
     setTimeout(() => {
@@ -923,177 +958,258 @@ export default function App() {
     }, 250);
   };
 
+  const LETTER_PARAGRAPHS = {
+    id: [
+      "Gak kerasa ya, sekarang kamu udah 24 tahun.",
+      "Selamat ulang tahun yaa. Selamat karena udah berhasil lewatin satu tahun dengan segala cerita, capek, bahagia, sedih, dan hal-hal yang mungkin gak semua orang tahu. Dan selamat juga karena sampai hari ini masih kuat ngadepin Abang yang kadang nyebelin ini. Itu pencapaian yang luar biasa loh. WKWK",
+      "Tapi kalau serius nih, Abang cuma mau bilang makasih.",
+      "Makasih karena kamu datang ke hidup Abang.",
+      "Sejak kenal kamu, banyak hal jadi terasa lebih menyenangkan. Weekend yang dulu biasa aja sekarang jadi sesuatu yang selalu ditunggu. Rasanya seneng aja kalau tau bakal ketemu kamu, ngobrol, jalan bareng, gangguin kamu, atau bahkan cuma duduk bareng sambil cerita hal-hal random, apalagi sampe deeptalk.",
+      "Makasih juga buat semua hal kecil yang kamu lakuin buat Abang. Buat masakan yang pernah kamu bikinin, buat waktu yang kamu luangin buat nyamperin Abang ke kantor, buat perhatian-perhatian kecil yang mungkin menurut kamu biasa aja tapi selalu bikin Abang merasa disayang.",
+      "Dan yang paling penting, makasih karena selalu ada.",
+      "Kamu udah lihat banyak versi Abang. Pas lagi seneng, pas lagi stres, pas lagi banyak pikiran, pas lagi nyebelin, pas lagi kentut, bahkan pas lagi ngadepin drama hidup. Tapi sampai sekarang kamu masih bertahan di sini. Jadi kadang Abang mikir, kamu ini manusia atau malaikat ya. Kayaknya dua-duanya deh. hehe gemesss 🤏🏻😭",
+      "Abang juga bangga banget sama kamu tauuuuuu...",
+      "Mungkin nggak semua orang tahu seberapa kuatnya kamu. Ada banyak hal yang udah kamu lewati, banyak hal yang mungkin kamu simpan sendiri. Tapi meskipun begitu, kamu tetap jadi orang yang ceria, baik, penuh tawa, petakilan, dan selalu bisa bikin Abang nyaman. Jujur, itu salah satu hal yang bikin Abang kagum sama kamu sampe sekarang.",
+      "Jadi kalau suatu saat kamu lagi capek, lagi sedih, atau ngerasa semuanya terasa berat, jangan dipendam sendiri ya. Kamu punya Abang sayangggg.",
+      "Kamu boleh cerita apa aja. Boleh ngeluh, boleh nangis, boleh marah, boleh manja, boleh kirim voice note panjang lebar sampe beberapa menit. Abang bakal dengerin. Ya walaupun kalo pas Abang ketiduran mungkin balasnya agak telat dikit. 😌",
+      "Sayangggggg, kita masih punya banyak hal yang belum kita jalanin bareng.",
+      "Masih banyak tempat yang pengen kita datengin, makanan yang pengen kita cobain, trend tiktok yang pengen kita bikin, foto yang pengen kita ambil, dan mimpi yang pengen kita kejar sama-sama. Dan nikah yaa tentunya hehe",
+      "Jadi tolong jaga diri baik-baik ya. Tetap sehat, tetap bahagia, dan tetap jadi diri kamu yang sekarang. Diri kamu yang selalu berhasil bikin Abang nyaman, bikin Abang ketawa, dan bikin Abang bersyukur karena dipertemukan sama kamu. ❤️",
+      "Happy Birthday sekali lagi, sayang.",
+      "Makasih karena udah jadi orang favorit Abang, notifikasi yang selalu ditunggu, dan salah satu hal terbaik yang pernah hadir di hidup Abang.",
+      "Sekarang nikmatin hari spesial kamu yaa.",
+      "Dan ingat satu hal penting:",
+      "Kamu memang makin tua. Tapi tenang... Kamu masih lebih muda dari Abang kok. 😌❤️",
+      "Abang sayang banget sama kamu. Sayaaaaanngggggg bangettttt. Lebih banyak dari yang bisa Abang ungkapin lewat tulisan ini. 💗",
+      "Love you more sayang 💗",
+      "Love you to the moon and back 💗",
+      "I love you to my fullest capacity. 💗"
+    ],
+    en: [
+      "It's crazy how you're already 24 years old now.",
+      "Happy Birthday yaaa. Congratulations for making it through another year with all the stories, struggles, happiness, sadness, and things that not everyone knows about. And congratulations as well for still being strong enough to deal with Abang until today. That's honestly a huge achievement. WKWK",
+      "But seriously, Abang just wants to say thank you.",
+      "Thank you for coming into my life.",
+      "Ever since I met you, so many things have become more enjoyable. Weekends that used to feel ordinary are now something I always look forward to. It just makes me happy knowing I'll get to see you, talk to you, go out with you, annoy you, or even just sit together talking about random things, especially when we end up having deep talks.",
+      "Thank you too for all the little things you do for Abang. For the meals you've cooked for me, for taking the time to come all the way to my office, and for all those little acts of care that might seem normal to you but always make me feel loved.",
+      "And most importantly, thank you for always being here.",
+      "You've seen so many versions of Abang. When I'm happy, stressed, overthinking, being annoying, farting, and even dealing with all the drama life throws at me. Yet somehow, you're still here. So sometimes Abang wonders... are you a human or an angel? I think you're both. Hehe gemesss 🤏🏻😭",
+      "And you know what? Abang is really, really proud of youuuuuu...",
+      "Maybe not everyone knows how strong you actually are. There are so many things you've gone through, so many things you've carried quietly on your own. But despite all of that, you still remain cheerful, kind, full of laughter, chaotic, and someone who always makes Abang feel comfortable. Honestly, that's one of the many reasons why Abang still admires you so much until today.",
+      "So if one day you're tired, sad, or feel like everything is becoming too heavy, please don't keep it all to yourself. You have Abang, sayangggg.",
+      "You can tell me anything. You can complain, cry, get mad, be clingy, or send me voice notes that are several minutes long. Abang will listen. Well... unless Abang accidentally falls asleep first, then my reply might be a little late. 😌",
+      "Sayangggggg, we still have so many things left to do together.",
+      "There are still so many places we want to visit, foods we want to try, TikTok trends we want to make, photos we want to take, and dreams we want to chase together. And of course... getting married too hehe.",
+      "So please take good care of yourself, okay? Stay healthy, stay happy, and stay exactly the way you are right now. The version of you that always makes Abang feel at home, makes Abang laugh, and makes Abang grateful that our paths crossed. ❤️",
+      "Happy Birthday once again, sayang.",
+      "Thank you for being Abang's favorite person, my favorite notification, and one of the best things that has ever happened in my life.",
+      "Now go enjoy your special day yaaa.",
+      "And remember one important thing:",
+      "You're getting older. But don't worry... You're still younger than Abang. 😌❤️",
+      "Abang loves you so, so much. Sayaaaaanngggggg bangettttt. More than I could ever put into words. 💗",
+      "Love you more, sayang 💗",
+      "Love you to the moon and back 💗",
+      "I love you to my fullest capacity. 💗"
+    ]
+  };
+
+  const generateLetterCanvas = (lang: 'en' | 'id') => {
+    const paragraphs = LETTER_PARAGRAPHS[lang];
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+
+    // Use a temporary context to calculate dynamic height
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return null;
+
+    let testY = 275;
+    const maxWidth = 640;
+    const lineHeight = 32;
+
+    const testWrapText = (textStr: string, maxW: number, lineH: number, isSpecial: boolean) => {
+      if (isSpecial) {
+        tempCtx.font = 'bold 18px Georgia, serif';
+      } else {
+        tempCtx.font = '500 17px sans-serif';
+      }
+      const words = textStr.split(' ');
+      let line = '';
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = tempCtx.measureText(testLine);
+        if (metrics.width > maxW && n > 0) {
+          testY += lineH;
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      testY += lineH;
+    };
+
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const text = paragraphs[pIdx];
+      const isHeading = text.includes('Happy Birthday once again') || text.includes('Happy Birthday sekali lagi') || text.includes('Abang loves you') || text.includes('Abang sayang banget');
+      const isSpecial = isHeading || text.includes('Love you more');
+      testWrapText(text, maxWidth, lineHeight, isSpecial);
+      testY += 14; 
+    }
+
+    const finalHeight = Math.ceil(testY + 180);
+    canvas.height = finalHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.imageSmoothingEnabled = true;
+
+    // Gradient background
+    const bgGrad = ctx.createLinearGradient(0, 0, 800, finalHeight);
+    bgGrad.addColorStop(0, '#ffffff');
+    bgGrad.addColorStop(0.5, '#fffefd');
+    bgGrad.addColorStop(1, '#fff4f6');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 800, finalHeight);
+
+    // Delicate Grid background pattern
+    ctx.fillStyle = 'rgba(255, 112, 174, 0.08)';
+    for (let x = 0; x < 800; x += 32) {
+      for (let y = 0; y < finalHeight; y += 32) {
+        ctx.fillRect(x, y, 1.5, 1.5);
+      }
+    }
+
+    // Outer & Inner borders
+    ctx.strokeStyle = '#ffeaf1';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(30, 30, 740, finalHeight - 60);
+
+    ctx.strokeStyle = '#ffaed1';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
+    ctx.strokeRect(40, 40, 720, finalHeight - 80);
+    ctx.setLineDash([]); 
+
+    const drawHeart = (cx: number, cy: number, size: number, color: string) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(size / 2, -size / 2, size, 0, 0, size);
+      ctx.bezierCurveTo(-size, 0, -size / 2, -size / 2, 0, 0);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    };
+
+    // Decorate corners
+    drawHeart(70, 70, 14, '#ff70ae');
+    drawHeart(70, finalHeight - 70, 14, '#ff70ae');
+    drawHeart(730, finalHeight - 70, 14, '#ff70ae');
+    drawHeart(730, 70, 14, '#ff70ae');
+
+    // Header Title
+    ctx.fillStyle = '#ff70ae';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('✿  A LITTLE NOTE', 80, 110);
+
+    ctx.fillStyle = '#4A2230';
+    ctx.font = 'bold 36px Georgia, "Times New Roman", serif';
+    ctx.fillText(lang === 'id' ? 'Selamat Ulang Tahun,' : 'Happy Birthday,', 80, 165);
+    ctx.fillText(lang === 'id' ? 'Ami Sayang 💗' : 'Ami Sayang 💗', 80, 215);
+
+    // Title divider line
+    ctx.strokeStyle = '#ffd6e7';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(80, 255);
+    ctx.lineTo(540, 255);
+    ctx.stroke();
+
+    let currentY = 285;
+
+    const wrapText = (textStr: string, xPos: number, yPos: number, maxW: number, lineH: number, isSpecial = false, isLast = false) => {
+      if (isSpecial) {
+        ctx.font = 'bold 17px Georgia, serif';
+        ctx.fillStyle = '#ff2a7f'; 
+      } else if (isLast) {
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillStyle = '#ff70ae';
+      } else {
+        ctx.font = '500 16px sans-serif';
+        ctx.fillStyle = '#4a2230';
+      }
+
+      const words = textStr.split(' ');
+      let line = '';
+      let startY = yPos;
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxW && n > 0) {
+          ctx.fillText(line, xPos, startY);
+          line = words[n] + ' ';
+          startY += lineH;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, xPos, startY);
+      return startY + lineH;
+    };
+
+    for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
+      const text = paragraphs[pIdx];
+      const isHeading = text.includes('Happy Birthday once again') || text.includes('Happy Birthday sekali lagi') || text.includes('Abang loves you') || text.includes('Abang sayang banget');
+      const isLast = text.includes('Love you more') || text.includes('Love you to the moon');
+      currentY = wrapText(text, 80, currentY, maxWidth, lineHeight, isHeading, isLast);
+      currentY += 14; 
+    }
+
+    // Dynamic signatures & footer sealed blocks
+    const footerStartY = finalHeight - 160;
+
+    // Horizontal Rule
+    ctx.strokeStyle = '#ffd6e7';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(80, footerStartY - 10);
+    ctx.lineTo(720, footerStartY - 10);
+    ctx.stroke();
+
+    ctx.fillStyle = '#8a5a68';
+    ctx.font = 'italic 15px Georgia, serif';
+    ctx.fillText('With Love,', 80, footerStartY + 25);
+
+    ctx.fillStyle = '#ff70ae';
+    ctx.font = 'bold 24px Georgia, serif';
+    ctx.fillText('Ardhi Satria', 80, footerStartY + 60);
+
+    ctx.fillStyle = '#8a5a68';
+    ctx.font = '13px monospace';
+    ctx.fillText('8 JUNE 2026 ✨', 80, footerStartY + 88);
+
+    drawHeart(670, footerStartY + 40, 20, '#ff5293');
+    ctx.fillStyle = '#ff70ae';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SEALED WITH', 670, footerStartY + 80);
+    ctx.fillText('LOVE', 670, footerStartY + 95);
+
+    return canvas;
+  };
+
   const downloadLetterAsImage = () => {
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 1150;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const canvas = generateLetterCanvas(letterLanguage);
+      if (!canvas) return;
 
-      // Enable text smoothing
-      ctx.imageSmoothingEnabled = true;
-
-      // 1. Background Gradient (Soft warm white to cute pale rose-crest)
-      const bgGrad = ctx.createLinearGradient(0, 0, 800, 1150);
-      bgGrad.addColorStop(0, '#ffffff');
-      bgGrad.addColorStop(0.5, '#fffefd');
-      bgGrad.addColorStop(1, '#fff4f6');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, 800, 1150);
-
-      // 2. Vintage Grid texture
-      ctx.fillStyle = 'rgba(255, 112, 174, 0.08)';
-      for (let x = 0; x < 800; x += 32) {
-        for (let y = 0; y < 1150; y += 32) {
-          ctx.fillRect(x, y, 1.5, 1.5);
-        }
-      }
-
-      // 3. Double Borders
-      // Outer pinstripe border
-      ctx.strokeStyle = '#ffeaf1';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(30, 30, 740, 1090);
-
-      // Inner dotted/dashed border
-      ctx.strokeStyle = '#ffaed1';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 8]);
-      ctx.strokeRect(40, 40, 720, 1070);
-      ctx.setLineDash([]); // Reset line dash
-
-      // Helper to draw cute hearts
-      const drawHeart = (cx: number, cy: number, size: number, color: string) => {
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.bezierCurveTo(size / 2, -size / 2, size, 0, 0, size);
-        ctx.bezierCurveTo(-size, 0, -size / 2, -size / 2, 0, 0);
-        ctx.fillStyle = color;
-        ctx.fill();
-        ctx.restore();
-      };
-
-      // 4. Corner Decorations
-      drawHeart(70, 70, 14, '#ff70ae');
-      drawHeart(70, 1080, 14, '#ff70ae');
-      drawHeart(730, 1080, 14, '#ff70ae');
-      drawHeart(730, 70, 14, '#ff70ae');
-
-      // 6. Left side headers
-      ctx.fillStyle = '#ff70ae';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText('✿  A LITTLE NOTE', 80, 110);
-
-      // Happy Birthday headline
-      ctx.fillStyle = '#4A2230';
-      ctx.font = 'bold 36px Georgia, "Times New Roman", serif';
-      ctx.fillText('Happy Birthday,', 80, 165);
-      ctx.fillText('Ami Sayang 💗', 80, 215);
-
-      // Draw separator line under title
-      ctx.strokeStyle = '#ffd6e7';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(80, 255);
-      ctx.lineTo(540, 255);
-      ctx.stroke();
-
-      // 7. Write Note Content
-      const paragraphs = [
-        "Honestly, I don't know how to fit everything i wanna say into just a few paragraphs.",
-        "Thank you for being my favorite person. Thank you for all the laughs, all the random conversations, all the little moments that make my days so much better.",
-        "Being with you makes even ordinary days feel special.",
-        "I hope this year brings you more happiness, more reasons to smile, and all the good things you've been wishing for. You deserve so much love, kindness, and beautiful things in life.",
-        "And if there's one thing I want you to remember today, it's that you are deeply loved. More than you know.",
-        "Thank you for always being my safest place, my comfort, and one of the best things that has ever happened to me.",
-        "I can't wait to make more memories with you, go on more little adventures, and spend more birthdays by your side.",
-        "Happy 24th birthday, Ami. ❤️",
-        "I love you, always."
-      ];
-
-      ctx.fillStyle = '#4A2230';
-      ctx.textAlign = 'left';
-      
-      let currentY = 305;
-      const maxWidth = 640;
-      const lineHeight = 32;
-
-      // Text wrapping function inside canvas helper
-      const wrapText = (textStr: string, xPos: number, yPos: number, maxW: number, lineH: number, isSpecial = false) => {
-        if (isSpecial) {
-          ctx.font = 'bold 18px Georgia, serif';
-          ctx.fillStyle = '#e11d48'; // rose-600
-        } else {
-          ctx.font = '500 17px sans-serif';
-          ctx.fillStyle = '#4a2230';
-        }
-
-        const words = textStr.split(' ');
-        let line = '';
-        let startY = yPos;
-
-        for (let n = 0; n < words.length; n++) {
-          const testLine = line + words[n] + ' ';
-          const metrics = ctx.measureText(testLine);
-          const testWidth = metrics.width;
-          if (testWidth > maxW && n > 0) {
-            ctx.fillText(line, xPos, startY);
-            line = words[n] + ' ';
-            startY += lineH;
-          } else {
-            line = testLine;
-          }
-        }
-        ctx.fillText(line, xPos, startY);
-        return startY + lineH; // Return ending Y position for next paragraph
-      };
-
-      for (let pIdx = 0; pIdx < paragraphs.length; pIdx++) {
-        const text = paragraphs[pIdx];
-        const isSpecial = text.includes('Happy 24th') || text.includes('I love you, always');
-        currentY = wrapText(text, 80, currentY, maxWidth, lineHeight, isSpecial);
-        currentY += 12; // Paragraph bottom spacing
-      }
-
-      // 8. Footer Block
-      // Horizontal rules
-      ctx.strokeStyle = '#ffd6e7';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(80, 935);
-      ctx.lineTo(720, 935);
-      ctx.stroke();
-
-      // Add signature labels
-      ctx.fillStyle = '#8a5a68';
-      ctx.font = 'italic 15px Georgia, serif';
-      ctx.fillText('With Love,', 80, 975);
-
-      ctx.fillStyle = '#ff70ae';
-      ctx.font = 'bold 24px Georgia, serif';
-      ctx.fillText('Ardhi Satria', 80, 1010);
-
-      ctx.fillStyle = '#8a5a68';
-      ctx.font = '13px monospace';
-      ctx.fillText('8 JUNE 2026 ✨', 80, 1038);
-
-      // Place decorative seal inside footer download canvas
-      drawHeart(670, 990, 20, '#ff5293');
-      ctx.fillStyle = '#ff70ae';
-      ctx.font = 'bold 10px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('SEALED WITH', 670, 1030);
-      ctx.fillText('LOVE', 670, 1045);
-
-      // Perform download
       const dataUrl = canvas.toDataURL('image/png');
       const dlLink = document.createElement('a');
       dlLink.href = dataUrl;
-      dlLink.download = 'ami-birthday-little-note.png';
+      dlLink.download = `ami-birthday-little-note-${letterLanguage}.png`;
       dlLink.click();
       
       setGalleryToast('Little note saved beautifully as an image! 💌✨');
@@ -1103,363 +1219,387 @@ export default function App() {
     }
   };
 
-  const downloadResearchJournalAsImage = () => {
+  const downloadLetterAsPDF = () => {
     try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1000;
-      canvas.height = 5500;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const canvas = generateLetterCanvas(letterLanguage);
+      if (!canvas) return;
 
-      ctx.imageSmoothingEnabled = true;
+      const dataUrl = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`ami-birthday-little-note-${letterLanguage}.pdf`);
 
-      // 2. Paper Header (Academic Style)
-      ctx.fillStyle = '#2d1a22';
-      ctx.font = 'bold 13px Georgia, serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('JOURNAL OF MARITAL & AMATORY SCIENCES  •  VOLUME 24  •  ISSUE 1', 500, 85);
-      
-      // Thin line separator for header
-      ctx.strokeStyle = '#2d1a22';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(80, 105);
-      ctx.lineTo(920, 105);
-      ctx.stroke();
+      setGalleryToast('Little note saved beautifully as a PDF! 💌📄✨');
+    } catch (err) {
+      console.error(err);
+      setGalleryToast('Oops, could not download PDF.');
+    }
+  };
 
-      // Research Journal Title Block
-      ctx.fillStyle = '#8a1f49'; // deep premium rose-crimson
-      ctx.font = 'bold 28px Georgia, serif';
-      ctx.fillText('RESEARCH JOURNAL', 500, 155);
+  const generateResearchJournalCanvas = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000;
+    canvas.height = 5500;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
 
-      let currentY = 210;
-      const leftMargin = 110;
-      const rightMargin = 110;
-      const lineLen = 1000 - leftMargin - rightMargin;
+    ctx.imageSmoothingEnabled = true;
 
-      const drawText = (
-        textStr: string,
-        font: string,
-        fillStyle: string,
-        lineH: number,
-        align: 'left' | 'center' = 'left',
-        isBullet = false
-      ) => {
-        ctx.font = font;
-        ctx.fillStyle = fillStyle;
-        ctx.textAlign = align;
+    // Academic Style Header Text template
+    ctx.fillStyle = '#2d1a22';
+    ctx.font = 'bold 13px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('JOURNAL OF MARITAL & AMATORY SCIENCES  •  VOLUME 24  •  ISSUE 1', 500, 85);
+    
+    // Line Separator
+    ctx.strokeStyle = '#2d1a22';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(80, 105);
+    ctx.lineTo(920, 105);
+    ctx.stroke();
 
-        const words = textStr.split(' ');
-        let line = '';
-        const xPos = align === 'center' ? 500 : (isBullet ? leftMargin + 20 : leftMargin);
+    // Research Title Block
+    ctx.fillStyle = '#8a1f49'; 
+    ctx.font = 'bold 28px Georgia, serif';
+    ctx.fillText('RESEARCH JOURNAL', 500, 155);
 
-        if (isBullet && align === 'left') {
-          ctx.fillText('•', leftMargin, currentY);
+    let currentY = 210;
+    const leftMargin = 110;
+    const rightMargin = 110;
+    const lineLen = 1000 - leftMargin - rightMargin;
+
+    const drawText = (
+      textStr: string,
+      font: string,
+      fillStyle: string,
+      lineH: number,
+      align: 'left' | 'center' = 'left',
+      isBullet = false
+    ) => {
+      ctx.font = font;
+      ctx.fillStyle = fillStyle;
+      ctx.textAlign = align;
+
+      const words = textStr.split(' ');
+      let line = '';
+      const xPos = align === 'center' ? 500 : (isBullet ? leftMargin + 20 : leftMargin);
+
+      if (isBullet && align === 'left') {
+        ctx.fillText('•', leftMargin, currentY);
+      }
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + (line === '' ? '' : ' ') + words[n];
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > (isBullet ? lineLen - 20 : lineLen)) {
+          ctx.fillText(line, xPos, currentY);
+          line = words[n];
+          currentY += lineH;
+        } else {
+          line = testLine;
         }
+      }
+      ctx.fillText(line, xPos, currentY);
+      currentY += lineH;
+    };
 
-        for (let n = 0; n < words.length; n++) {
-          const testLine = line + (line === '' ? '' : ' ') + words[n];
-          const metrics = ctx.measureText(testLine);
-          if (metrics.width > (isBullet ? lineLen - 20 : lineLen)) {
-            ctx.fillText(line, xPos, currentY);
-            line = words[n];
-            currentY += lineH;
-          } else {
-            line = testLine;
-          }
-        }
-        ctx.fillText(line, xPos, currentY);
-        currentY += lineH;
-      };
-
-      const drawDivider = () => {
-        ctx.strokeStyle = 'rgba(45, 26, 34, 0.15)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(110, currentY);
-        ctx.lineTo(890, currentY);
-        ctx.stroke();
-        currentY += 25;
-      };
-
-      // Title Details
-      drawText('Title: Long-Term Observation of a Woman Named Dian Islami (Ami)', 'bold 22px Georgia, serif', '#2d1a22', 32, 'center');
-      currentY += 5;
-      drawText('Lead Researcher: Ardhi Satria    •    Date: 3 June 2026', 'italic 16px Georgia, serif', '#5f4c51', 24, 'center');
-      currentY += 15;
-      drawDivider();
-      currentY += 10;
-
-      // 1. Abstract
-      drawText('Abstract', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 5;
-      drawText('Penelitian ini merupakan studi lanjutan terhadap seorang perempuan bernama Dian Islami, yang lebih dikenal sebagai Ami, dan telah berlangsung selama beberapa tahun terakhir.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
-      currentY += 8;
-      drawText('Hasil penelitian menunjukkan bahwa subjek memiliki pengaruh positif yang signifikan terhadap kehidupan peneliti, termasuk peningkatan rasa tenang, kebahagiaan, rasa dicintai, dan optimisme terhadap masa depan.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
-      currentY += 8;
-      drawText('Temuan terbaru juga menunjukkan bahwa seluruh hipotesis yang pernah dibuat sebelumnya masih terbukti valid hingga saat ini.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
-      currentY += 20;
-      drawDivider();
-
-      // 2. Introduction
-      drawText('Introduction', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 10;
-      drawText('Sebelum mengenal Ami, peneliti memiliki beberapa asumsi tentang hidup dan tentang cinta.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 8;
-      drawText('Peneliti mengira bahwa mencintai seseorang berarti harus selalu khawatir kehilangan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 8;
-      drawText('Peneliti mengira bahwa effort sebesar yang selama ini diterima hanyalah sesuatu yang terjadi pada orang lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 8;
-      drawText('Peneliti juga mengira bahwa dirinya akan tetap menjadi orang yang cuek dan sulit mengekspresikan perasaan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 8;
-      drawText('Namun setelah Ami hadir, sebagian besar asumsi tersebut terbukti tidak akurat.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 20;
-      drawDivider();
-
-      // 3. Findings
-      drawText('Findings', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 15;
-
-      // Finding #1
-      drawText('Finding #1', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
-      drawText('Ami adalah perempuan yang jauh lebih kuat dari yang ia sadari.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Selama masa observasi, ditemukan bahwa subjek mampu menghadapi banyak hal dalam hidup tanpa kehilangan kelembutan hatinya.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Ami mampu menanggung luka, kesedihan, dan berbagai tantangan dengan cara yang sering kali tidak diketahui orang lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Temuan ini menjadi salah satu alasan utama peneliti sangat mengagumi subjek.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 18;
-
-      // Finding #2
-      drawText('Finding #2', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
-      drawText('Dicintai dengan setara ternyata nyata.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Sebelum penelitian dimulai, peneliti tidak memiliki banyak data mengenai hubungan yang saling mengusahakan satu sama lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Namun setelah mengenal Ami, ditemukan bahwa cinta tidak selalu harus membuat seseorang merasa takut ditinggalkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Cinta juga bisa terasa aman.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Cinta juga bisa terasa tenang.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Dan Ami adalah orang pertama yang membuat peneliti benar-benar memahami hal tersebut.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 18;
-
-      // Finding #3
-      drawText('Finding #3', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
-      drawText('Ami selalu hadir, terutama saat keadaan sedang sulit.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Data menunjukkan bahwa ketika peneliti berada dalam masa yang tidak mudah, subjek secara konsisten memberikan dukungan, perhatian, dan rasa nyaman.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Bahkan pada saat-saat di mana Ami tidak bisa menyelesaikan masalah peneliti secara langsung, kehadirannya saja sudah cukup untuk membuat keadaan terasa lebih ringan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Temuan ini memperkuat keyakinan bahwa Ami bukan hanya hadir saat keadaan baik, tetapi juga memilih bertahan saat keadaan sulit.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 18;
-
-      // Finding #4
-      drawText('Finding #4', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
-      drawText('Ami membuat peneliti ingin menjadi pribadi yang lebih baik.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Observasi menunjukkan adanya perubahan perilaku pada peneliti setelah mengenal subjek.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Peneliti menjadi lebih peduli terhadap hal-hal kecil.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Lebih memahami bahwa perhatian sederhana bisa memiliki makna yang besar.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Lebih berusaha menunjukkan rasa sayang dibanding hanya menyimpannya dalam pikiran.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Meskipun prosesnya masih berlangsung, seluruh perubahan tersebut berawal dari Ami.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 18;
-
-      // Finding #5
-      drawText('Finding #5', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
-      drawText('Rasa kagum tidak berkurang seiring waktu.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Berdasarkan teori umum, banyak hal akan terasa biasa setelah dijalani cukup lama.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Namun teori tersebut tidak berlaku pada penelitian ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Semakin lama peneliti mengenal Ami, semakin banyak alasan untuk bersyukur karena dipertemukan dengannya.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 25;
-      drawDivider();
-
-      // 4. Discussion
-      drawText('Discussion', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 10;
-      drawText('Salah satu pertanyaan yang terus muncul selama penelitian berlangsung adalah: "What if we never met?"', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 10;
-      drawText('Setelah dilakukan berbagai simulasi and analisis, peneliti menyimpulkan bahwa hidup tetap akan berjalan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Namun hidup tersebut tidak akan memiliki Ami.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 12;
-
-      drawText('Tidak akan ada seseorang yang selalu ditunggu setiap minggu.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('Tidak akan ada telepon-telepon panjang di malam hari.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('Tidak akan ada cerita random yang selalu berhasil membuat hari terasa lebih menyenangkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('Tidak akan ada rasa nyaman yang selama ini menjadi bagian dari keseharian peneliti.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 12;
-
-      drawText('Dan mungkin, peneliti tidak akan pernah tahu bahwa dirinya bisa dicintai sedalam ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 25;
-      drawDivider();
-
-      // 5. Conclusion
-      drawText('Conclusion', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 10;
-      drawText('Pada usia 24 tahun, Dian Islami (Ami) tetap menjadi salah satu penemuan terbaik dalam hidup peneliti.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Seluruh data yang terkumpul menunjukkan bahwa subjek masih menjadi tempat pulang, tempat bercerita, tempat bertumbuh, dan orang yang paling ingin peneliti perjuangkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 25;
-      drawDivider();
-
-      // 6. Future Research
-      drawText('Future Research', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 10;
-      drawText('Penelitian akan terus dilanjutkan dengan fokus pada:', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 12;
-      drawText('More memories.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('More late-night conversations.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('More adventures.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('More dreams achieved together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('More birthdays celebrated together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 4;
-      drawText('And hopefully, one day, building a home together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
-      currentY += 25;
-      drawDivider();
-
-      // 7. Final Statement
-      drawText('Final Statement', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
-      currentY += 10;
-      drawText('Selamat ulang tahun yang ke-24, Ami. ❤️', 'bold 16px Georgia, serif', '#2d1a22', 24, 'left');
-      currentY += 10;
-      drawText('Terima kasih karena sudah bertahan sejauh ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Terima kasih karena sudah memilih untuk mencintai Ardhi dengan cara yang begitu tulus.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 4;
-      drawText('Terima kasih karena sudah menjadi alasan yang membuat Ardhi percaya bahwa cinta yang sehat, tenang, dan diperjuangkan bersama itu benar-benar ada.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 16;
-
-      drawText('Setelah seluruh data dikumpulkan, dianalisis, dan ditinjau ulang, tidak ditemukan satu pun bukti yang mampu membantah kesimpulan berikut:', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
-      currentY += 20;
-
-      // Special box for Dian Islami adalah orang yang paling Ardhi syukuri
-      ctx.fillStyle = '#fff9f6';
-      ctx.fillRect(leftMargin, currentY, lineLen, 70);
-      ctx.strokeStyle = '#8a1f49';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(leftMargin, currentY, lineLen, 70);
-      
-      ctx.font = 'bold 16px Georgia, serif';
-      ctx.fillStyle = '#8a1f49';
-      ctx.textAlign = 'center';
-      ctx.fillText('Dian Islami adalah orang yang paling Ardhi syukuri dalam hidupnya.', 500, currentY + 41);
-      currentY += 105;
-
-      drawText('Dan dengan tingkat keyakinan 100%,', 'italic 16px Georgia, serif', '#2d1a22', 24, 'center');
-      currentY += 5;
-      
-      ctx.font = 'bold 22px Georgia, serif';
-      ctx.fillStyle = '#8a1f49';
-      ctx.fillText('Ardhi Satria sayang banget sama Ami.', 500, currentY + 10);
-      currentY += 45;
-
-      drawText('*End of Report.*', 'italic 13px Georgia, serif', '#8a5a68', 20, 'center');
-      currentY += 35;
-
-      // Double Signatures / Seal of Approval block
-      ctx.strokeStyle = '#2d1a22';
+    const drawDivider = () => {
+      ctx.strokeStyle = 'rgba(45, 26, 34, 0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(110, currentY);
       ctx.lineTo(890, currentY);
       ctx.stroke();
       currentY += 25;
+    };
 
-      // Left signature
-      ctx.font = 'bold 13px "Times New Roman", Times, serif';
-      ctx.fillStyle = '#2d1a22';
-      ctx.textAlign = 'left';
-      ctx.fillText('Lead Researcher Approval:', 120, currentY + 15);
-      
-      // Hand write font-like signature
-      ctx.font = 'italic 26px Georgia, serif';
-      ctx.fillStyle = '#8a1f49';
-      ctx.fillText('Ardhi Satria', 120, currentY + 48);
+    // Main Header Specs
+    drawText('Title: Long-Term Observation of a Woman Named Dian Islami (Ami)', 'bold 22px Georgia, serif', '#2d1a22', 32, 'center');
+    currentY += 5;
+    drawText('Lead Researcher: Ardhi Satria    •    Date: 3 June 2026', 'italic 16px Georgia, serif', '#5f4c51', 24, 'center');
+    currentY += 15;
+    drawDivider();
+    currentY += 10;
 
-      ctx.font = '12px "Times New Roman", Times, serif';
-      ctx.fillStyle = '#666';
-      ctx.fillText('Ardhi Satria, B.S. (Beloved Spouse)', 120, currentY + 74);
+    // 1. Abstract Block
+    drawText('Abstract', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 5;
+    drawText('Penelitian ini merupakan studi lanjutan terhadap seorang perempuan bernama Dian Islami, yang lebih dikenal sebagai Ami, dan telah berlangsung selama beberapa tahun terakhir.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
+    currentY += 8;
+    drawText('Hasil penelitian menunjukkan bahwa subjek memiliki pengaruh positif yang signifikan terhadap kehidupan peneliti, termasuk peningkatan rasa tenang, kebahagiaan, rasa dicintai, dan optimisme terhadap masa depan.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
+    currentY += 8;
+    drawText('Temuan terbaru juga menunjukkan bahwa seluruh hipotesis yang pernah dibuat sebelumnya masih terbukti valid hingga saat ini.', 'italic 15px Georgia, serif', '#423c3e', 24, 'left');
+    currentY += 20;
+    drawDivider();
 
-      // Cute seal stamp in bottom right
-      ctx.save();
-      const sealX = 760;
-      const sealY = currentY + 10;
-      ctx.beginPath();
-      ctx.arc(sealX, sealY + 40, 45, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(239, 68, 111, 0.45)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
+    // 2. Introduction Block
+    drawText('Introduction', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 10;
+    drawText('Sebelum mengenal Ami, peneliti memiliki beberapa asumsi tentang hidup dan tentang cinta.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 8;
+    drawText('Peneliti mengira bahwa mencintai seseorang berarti harus selalu khawatir kehilangan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 8;
+    drawText('Peneliti mengira bahwa effort sebesar yang selama ini diterima hanyalah sesuatu yang terjadi pada orang lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 8;
+    drawText('Peneliti juga mengira bahwa dirinya akan tetap menjadi orang yang cuek dan sulit mengekspresikan perasaan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 8;
+    drawText('Namun setelah Ami hadir, sebagian besar asumsi tersebut terbukti tidak akurat.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 20;
+    drawDivider();
 
-      ctx.beginPath();
-      ctx.arc(sealX, sealY + 40, 41, 0, Math.PI * 2);
-      ctx.setLineDash([4, 4]);
-      ctx.stroke();
-      ctx.restore();
+    // 3. Findings Block
+    drawText('Findings', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 15;
 
-      ctx.font = 'bold 10px Courier New, Courier, monospace';
-      ctx.fillStyle = 'rgba(239, 68, 111, 0.7)';
-      ctx.textAlign = 'center';
-      ctx.fillText('APPROVED', sealX, sealY + 40);
-      ctx.fillText('AMI\'S DAY', sealX, sealY + 53);
-      ctx.fillText('8 JUN 2026', sealX, sealY + 66);
+    // Finding 1
+    drawText('Finding #1', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+    drawText('Ami adalah perempuan yang jauh lebih kuat dari yang ia sadari.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Selama masa observasi, ditemukan bahwa subjek mampu menghadapi banyak hal dalam hidup tanpa kehilangan kelembutan hatinya.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Ami mampu menanggung luka, kesedihan, dan berbagai tantangan dengan cara yang sering kali tidak diketahui orang lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Temuan ini menjadi salah satu alasan utama peneliti sangat mengagumi subjek.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 18;
 
-      // Calculate dynamic final height to hug the actual drawn content perfectly with balanced margins
-      const finalHeight = Math.ceil(sealY + 140);
+    // Finding 2
+    drawText('Finding #2', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+    drawText('Dicintai dengan setara ternyata nyata.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Sebelum penelitian dimulai, peneliti tidak memiliki banyak data mengenai hubungan yang saling mengusahakan satu sama lain.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Namun setelah mengenal Ami, ditemukan bahwa cinta tidak selalu harus membuat seseorang merasa takut ditinggalkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Cinta juga bisa terasa aman.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Cinta juga bisa terasa tenang.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Dan Ami adalah orang pertama yang membuat peneliti benar-benar memahami hal tersebut.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 18;
 
-      // Create final canvas that matches the exact content height
-      const finalCanvas = document.createElement('canvas');
-      finalCanvas.width = 1000;
-      finalCanvas.height = finalHeight;
-      const finalCtx = finalCanvas.getContext('2d');
-      if (!finalCtx) return;
+    // Finding 3
+    drawText('Finding #3', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+    drawText('Ami selalu hadir, terutama saat keadaan sedang sulit.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Data menunjukkan bahwa ketika peneliti berada dalam masa yang tidak mudah, subjek secara konsisten memberikan dukungan, perhatian, dan rasa nyaman.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Bahkan pada saat-saat di mana Ami tidak bisa menyelesaikan masalah peneliti secara langsung, kehadirannya saja sudah cukup untuk membuat keadaan terasa lebih ringan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Temuan ini memperkuat keyakinan bahwa Ami bukan hanya hadir saat keadaan baik, tetapi juga memilih bertahan saat keadaan sulit.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 18;
 
-      finalCtx.imageSmoothingEnabled = true;
+    // Finding 4
+    drawText('Finding #4', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+    drawText('Ami membuat peneliti ingin menjadi pribadi yang lebih baik.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Observasi menunjukkan adanya perubahan perilaku pada peneliti setelah mengenal subjek.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Peneliti menjadi lebih peduli terhadap hal-hal kecil.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Lebih memahami bahwa perhatian sederhana bisa memiliki makna yang besar.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Lebih berusaha menunjukkan rasa sayang dibanding hanya menyimpannya dalam pikiran.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Meskipun prosesnya masih berlangsung, seluruh perubahan tersebut berawal dari Ami.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 18;
 
-      // 1. Clean ivory academic paper background texture
-      finalCtx.fillStyle = '#fcfbf7';
-      finalCtx.fillRect(0, 0, 1000, finalHeight);
+    // Finding 5
+    drawText('Finding #5', 'bold 16px Georgia, serif', '#8a1f49', 24, 'left');
+    drawText('Rasa kagum tidak berkurang seiring waktu.', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Berdasarkan teori umum, banyak hal akan terasa biasa setelah dijalani cukup lama.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Namun teori tersebut tidak berlaku pada penelitian ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Semakin lama peneliti mengenal Ami, semakin banyak alasan untuk bersyukur karena dipertemukan dengannya.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 25;
+    drawDivider();
 
-      // Cute faint grid (academic watermark)
-      finalCtx.fillStyle = 'rgba(138, 90, 104, 0.02)';
-      for (let x = 0; x < 1000; x += 40) {
-        finalCtx.fillRect(x, 0, 1, finalHeight);
-      }
-      for (let y = 0; y < finalHeight; y += 40) {
-        finalCtx.fillRect(0, y, 1000, 1);
-      }
+    // 4. Discussion Block
+    drawText('Discussion', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 10;
+    drawText('Salah satu pertanyaan yang terus muncul selama penelitian berlangsung adalah: "What if we never met?"', 'bold 15px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 10;
+    drawText('Setelah dilakukan berbagai simulasi and analisis, peneliti menyimpulkan bahwa hidup tetap akan berjalan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Namun hidup tersebut tidak akan memiliki Ami.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 12;
 
-      // Outer margin borders relative to finalHeight
-      finalCtx.strokeStyle = '#2d1a22';
-      finalCtx.lineWidth = 1.5;
-      finalCtx.strokeRect(40, 40, 920, finalHeight - 80); // dynamic outer border matching 40px margin
+    drawText('Tidak akan ada seseorang yang selalu ditunggu setiap minggu.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('Tidak akan ada telepon-telepon panjang di malam hari.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('Tidak akan ada cerita random yang selalu berhasil membuat hari terasa lebih menyenangkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('Tidak akan ada rasa nyaman yang selama ini menjadi bagian dari keseharian peneliti.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 12;
 
-      finalCtx.strokeStyle = 'rgba(45, 26, 34, 0.2)';
-      finalCtx.lineWidth = 1;
-      finalCtx.strokeRect(50, 50, 900, finalHeight - 100); // dynamic inner thin line matching 50px margin
+    drawText('Dan mungkin, peneliti tidak akan pernah tahu bahwa dirinya bisa dicintai sedalam ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 25;
+    drawDivider();
 
-      // Copy the drawn content from the transparent temp canvas on top
-      finalCtx.drawImage(canvas, 0, 0, 1000, finalHeight, 0, 0, 1000, finalHeight);
+    // 5. Conclusion Block
+    drawText('Conclusion', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 10;
+    drawText('Pada usia 24 tahun, Dian Islami (Ami) tetap menjadi salah satu penemuan terbaik dalam hidup peneliti.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Seluruh data yang terkumpul menunjukkan bahwa subjek masih menjadi tempat pulang, tempat bercerita, tempat bertumbuh, dan orang yang paling ingin peneliti perjuangkan.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 25;
+    drawDivider();
 
-      // Perform direct download of the image
-      const dataUrl = finalCanvas.toDataURL('image/png');
+    // 6. Future Research Block
+    drawText('Future Research', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 10;
+    drawText('Penelitian akan terus dilanjutkan dengan fokus pada:', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 12;
+    drawText('More memories.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('More late-night conversations.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('More adventures.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('More dreams achieved together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('More birthdays celebrated together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 4;
+    drawText('And hopefully, one day, building a home together.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left', true);
+    currentY += 25;
+    drawDivider();
+
+    // 7. Final Statement Block
+    drawText('Final Statement', 'bold 18px Georgia, serif', '#8a1f49', 28, 'left');
+    currentY += 10;
+    drawText('Selamat ulang tahun yang ke-24, Ami. ❤️', 'bold 16px Georgia, serif', '#2d1a22', 24, 'left');
+    currentY += 10;
+    drawText('Terima kasih karena sudah bertahan sejauh ini.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Terima kasih karena sudah memilih untuk mencintai Ardhi dengan cara yang begitu tulus.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 4;
+    drawText('Terima kasih karena sudah menjadi alasan yang membuat Ardhi percaya bahwa cinta yang sehat, tenang, dan diperjuangkan bersama itu benar-benar ada.', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 16;
+
+    drawText('Setelah seluruh data dikumpulkan, dianalisis, dan ditinjau ulang, tidak ditemukan satu pun bukti yang mampu membantah kesimpulan berikut:', '15px "Times New Roman", Times, serif', '#2d1a22', 24, 'left');
+    currentY += 20;
+
+    // Special box for Dian Islami adalah orang yang paling Ardhi syukuri
+    ctx.fillStyle = '#fff9f6';
+    ctx.fillRect(leftMargin, currentY, lineLen, 70);
+    ctx.strokeStyle = '#8a1f49';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(leftMargin, currentY, lineLen, 70);
+    
+    ctx.font = 'bold 16px Georgia, serif';
+    ctx.fillStyle = '#8a1f49';
+    ctx.textAlign = 'center';
+    ctx.fillText('Dian Islami adalah orang yang paling Ardhi syukuri dalam hidupnya.', 500, currentY + 41);
+    currentY += 105;
+
+    drawText('Dan dengan tingkat keyakinan 100%,', 'italic 16px Georgia, serif', '#2d1a22', 24, 'center');
+    currentY += 5;
+    
+    ctx.font = 'bold 22px Georgia, serif';
+    ctx.fillStyle = '#8a1f49';
+    ctx.fillText('Ardhi Satria sayang banget sama Ami.', 500, currentY + 10);
+    currentY += 45;
+
+    drawText('*End of Report.*', 'italic 13px Georgia, serif', '#8a5a68', 20, 'center');
+    currentY += 35;
+
+    // Double Signatures / Seal block
+    ctx.strokeStyle = '#2d1a22';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(110, currentY);
+    ctx.lineTo(890, currentY);
+    ctx.stroke();
+    currentY += 25;
+
+    // Left signature
+    ctx.font = 'bold 13px "Times New Roman", Times, serif';
+    ctx.fillStyle = '#2d1a22';
+    ctx.textAlign = 'left';
+    ctx.fillText('Lead Researcher Approval:', 120, currentY + 15);
+    
+    ctx.font = 'italic 26px Georgia, serif';
+    ctx.fillStyle = '#8a1f49';
+    ctx.fillText('Ardhi Satria', 120, currentY + 48);
+
+    ctx.font = '12px "Times New Roman", Times, serif';
+    ctx.fillStyle = '#666';
+    ctx.fillText('Ardhi Satria, B.S. (Beloved Spouse)', 120, currentY + 74);
+
+    // Seal stamp
+    ctx.save();
+    const sealX = 760;
+    const sealY = currentY + 10;
+    ctx.beginPath();
+    ctx.arc(sealX, sealY + 40, 45, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(239, 68, 111, 0.45)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(sealX, sealY + 40, 41, 0, Math.PI * 2);
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.font = 'bold 10px Courier New, Courier, monospace';
+    ctx.fillStyle = 'rgba(239, 68, 111, 0.7)';
+    ctx.textAlign = 'center';
+    ctx.fillText('APPROVED', sealX, sealY + 40);
+    ctx.fillText('AMI\'S DAY', sealX, sealY + 53);
+    ctx.fillText('8 JUN 2026', sealX, sealY + 66);
+
+    const finalHeight = Math.ceil(sealY + 140);
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = 1000;
+    finalCanvas.height = finalHeight;
+    const finalCtx = finalCanvas.getContext('2d');
+    if (!finalCtx) return null;
+
+    finalCtx.imageSmoothingEnabled = true;
+
+    // Clean academic paper ivory background texture
+    finalCtx.fillStyle = '#fcfbf7';
+    finalCtx.fillRect(0, 0, 1000, finalHeight);
+
+    // Subtle Grid watermark
+    finalCtx.fillStyle = 'rgba(138, 90, 104, 0.02)';
+    for (let x = 0; x < 1000; x += 40) {
+      finalCtx.fillRect(x, 0, 1, finalHeight);
+    }
+    for (let y = 0; y < finalHeight; y += 40) {
+      finalCtx.fillRect(0, y, 1000, 1);
+    }
+
+    // Border Frame Relative to Dynamic Height
+    finalCtx.strokeStyle = '#2d1a22';
+    finalCtx.lineWidth = 1.5;
+    finalCtx.strokeRect(40, 40, 920, finalHeight - 80);
+
+    finalCtx.strokeStyle = 'rgba(45, 26, 34, 0.2)';
+    finalCtx.lineWidth = 1;
+    finalCtx.strokeRect(50, 50, 900, finalHeight - 100);
+
+    // Paint the drawn layers
+    finalCtx.drawImage(canvas, 0, 0, 1000, finalHeight, 0, 0, 1000, finalHeight);
+
+    return finalCanvas;
+  };
+
+  const downloadResearchJournalAsImage = () => {
+    try {
+      const canvas = generateResearchJournalCanvas();
+      if (!canvas) return;
+
+      const dataUrl = canvas.toDataURL('image/png');
       const dlLink = document.createElement('a');
       dlLink.href = dataUrl;
       dlLink.download = 'ami-long-term-research-journal.png';
@@ -1472,186 +1612,24 @@ export default function App() {
     }
   };
 
-  const downloadResearchJournalAsText = () => {
+  const downloadResearchJournalAsPDF = () => {
     try {
-      const text = `# Research Journal
-
-**Title:** Long-Term Observation of a Woman Named Dian Islami (Ami)
-
-**Lead Researcher:** Ardhi Satria
-
-**Date:** 3 June 2026
-
----
-
-## Abstract
-
-Penelitian ini merupakan studi lanjutan terhadap seorang perempuan bernama **Dian Islami**, yang lebih dikenal sebagai **Ami**, dan telah berlangsung selama beberapa tahun terakhir.
-
-Hasil penelitian menunjukkan bahwa subjek memiliki pengaruh positif yang signifikan terhadap kehidupan peneliti, termasuk peningkatan rasa tenang, kebahagiaan, rasa dicintai, dan optimisme terhadap masa depan.
-
-Temuan terbaru juga menunjukkan bahwa seluruh hipotesis yang pernah dibuat sebelumnya masih terbukti valid hingga saat ini.
-
----
-
-## Introduction
-
-Sebelum mengenal Ami, peneliti memiliki beberapa asumsi tentang hidup dan tentang cinta.
-
-Peneliti mengira bahwa mencintai seseorang berarti harus selalu khawatir kehilangan.
-
-Peneliti mengira bahwa effort sebesar yang selama ini diterima hanyalah sesuatu yang terjadi pada orang lain.
-
-Peneliti juga mengira bahwa dirinya akan tetap menjadi orang yang cuek dan sulit mengekspresikan perasaan.
-
-Namun setelah Ami hadir, sebagian besar asumsi tersebut terbukti tidak akurat.
-
----
-
-## Findings
-
-### Finding #1
-
-**Ami adalah perempuan yang jauh lebih kuat dari yang ia sadari.**
-
-Selama masa observasi, ditemukan bahwa subjek mampu menghadapi banyak hal dalam hidup tanpa kehilangan kelembutan hatinya.
-
-Ami mampu menanggung luka, kesedihan, dan berbagai tantangan dengan cara yang sering kali tidak diketahui orang lain.
-
-Temuan ini menjadi salah satu alasan utama peneliti sangat mengagumi subjek.
-
----
-
-### Finding #2
-
-**Dicintai dengan setara ternyata nyata.**
-
-Sebelum penelitian dimulai, peneliti tidak memiliki banyak data mengenai hubungan yang saling mengusahakan satu sama lain.
-
-Namun setelah mengenal Ami, ditemukan bahwa cinta tidak selalu harus membuat seseorang merasa takut ditinggalkan.
-
-Cinta juga bisa terasa aman.
-
-Cinta juga bisa terasa tenang.
-
-Dan Ami adalah orang pertama yang membuat peneliti benar-benar memahami hal tersebut.
-
----
-
-### Finding #3
-
-**Ami selalu hadir, terutama saat keadaan sedang sulit.**
-
-Data menunjukkan bahwa ketika peneliti berada dalam masa yang tidak mudah, subjek secara konsisten memberikan dukungan, perhatian, dan rasa nyaman.
-
-Bahkan pada saat-saat di mana Ami tidak bisa menyelesaikan masalah peneliti secara langsung, kehadirannya saja sudah cukup untuk membuat keadaan terasa lebih ringan.
-
-Temuan ini memperkuat keyakinan bahwa Ami bukan hanya hadir saat keadaan baik, tetapi juga memilih bertahan saat keadaan sulit.
-
----
-
-### Finding #4
-
-**Ami membuat peneliti ingin menjadi pribadi yang lebih baik.**
-
-Observasi menunjukkan adanya perubahan perilaku pada peneliti setelah mengenal subjek.
-
-Peneliti menjadi lebih peduli terhadap hal-hal kecil.
-
-Lebih memahami bahwa perhatian sederhana bisa memiliki makna yang besar.
-
-More berusaha menunjukkan rasa sayang dibanding hanya menyimpannya dalam pikiran.
-
-Meskipun prosesnya masih berlangsung, seluruh perubahan tersebut berawal dari Ami.
-
----
-
-### Finding #5
-
-**Rasa kagum tidak berkurang seiring waktu.**
-
-Berdasarkan teori umum, banyak hal akan terasa biasa setelah dijalani cukup lama.
-
-Namun teori tersebut tidak berlaku pada penelitian ini.
-
-Semakin lama peneliti mengenal Ami, semakin banyak alasan untuk bersyukur karena dipertemukan dengannya.
-
----
-
-## Discussion
-
-Salah satu pertanyaan yang terus muncul selama penelitian berlangsung adalah:
-
-**"What if we never met?"**
-
-Setelah dilakukan berbagai simulasi dan analisis, peneliti menyimpulkan bahwa hidup tetap akan berjalan.
-
-Namun hidup tersebut tidak akan memiliki Ami.
-
-Tidak akan ada seseorang yang selalu ditunggu setiap minggu.
-
-Tidak akan ada telepon-telepon panjang di malam hari.
-
-Tidak akan ada cerita random yang selalu berhasil membuat hari terasa lebih menyenangkan.
-
-Tidak akan ada rasa nyaman yang selama ini menjadi bagian dari keseharian peneliti.
-
-Dan mungkin, peneliti tidak akan pernah tahu bahwa dirinya bisa dicintai sedalam ini.
-
----
-
-## Conclusion
-
-Pada usia 24 tahun, **Dian Islami (Ami)** tetap menjadi salah satu penemuan terbaik dalam hidup peneliti.
-
-Seluruh data yang terkumpul menunjukkan bahwa subjek masih menjadi tempat pulang, tempat bercerita, tempat bertumbuh, dan orang yang paling ingin peneliti perjuangkan.
-
----
-
-## Future Research
-
-Penelitian akan terus dilanjutkan dengan fokus pada:
-
-* More memories.
-* More late-night conversations.
-* More adventures.
-* More dreams achieved together.
-* More birthdays celebrated together.
-* And hopefully, one day, building a home together.
-
----
-
-## Final Statement
-
-Selamat ulang tahun yang ke-24, Ami. ❤️
-
-Terima kasih karena sudah bertahan sejauh ini.
-
-Terima kasih karena sudah memilih untuk mencintai Ardhi dengan cara yang begitu tulus.
-
-Terima kasih karena sudah menjadi alasan yang membuat Ardhi percaya bahwa cinta yang sehat, tenang, dan diperjuangkan bersama itu benar-benar ada.
-
-Setelah seluruh data dikumpulkan, dianalisis, dan ditinjau ulang, tidak ditemukan satu pun bukti yang mampu membantah kesimpulan berikut:
-
-### **Dian Islami adalah orang yang paling Ardhi syukuri dalam hidupnya.**
-
-Dan dengan tingkat keyakinan 100%,
-
-### **Ardhi Satria sayang banget sama Ami.**
-
-*End of Report.*`;
-
-      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const dlLink = document.createElement('a');
-      dlLink.href = url;
-      dlLink.download = 'ami-long-term-research-journal.md';
-      dlLink.click();
-      URL.revokeObjectURL(url);
-      setGalleryToast('Special Research Journal downloaded as text file! 📝✨');
+      const canvas = generateResearchJournalCanvas();
+      if (!canvas) return;
+
+      const dataUrl = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+      pdf.addImage(dataUrl, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save('ami-long-term-research-journal.pdf');
+
+      setGalleryToast('Special Research Journal downloaded as PDF! 📄🎓✨');
     } catch (err) {
       console.error(err);
-      setGalleryToast('Oops, could not download text file.');
+      setGalleryToast('Oops, could not construct the journal PDF.');
     }
   };
 
@@ -1698,7 +1676,12 @@ Dan dengan tingkat keyakinan 100%,
   };
 
   const toggleMusic = () => {
-    setIsPlaying(!isPlaying);
+    const nextPlaying = !isPlaying;
+    setIsPlaying(nextPlaying);
+    if (audioRef.current) {
+      const baseUrl = 'https://www.youtube.com/embed/WCce-3XMdJs';
+      audioRef.current.src = `${baseUrl}?autoplay=${nextPlaying ? 1 : 0}&loop=1&playlist=WCce-3XMdJs&enablejsapi=1&playsinline=1`;
+    }
   };
 
   // Sync music state with iframe src
@@ -2373,10 +2356,11 @@ Dan dengan tingkat keyakinan 100%,
         ))}
       </div>
 
-      {/* Music Iframe */}
+      {/* Music Iframe - Positioned offscreen to prevent browser display-none throttling */}
       <iframe
         ref={audioRef}
-        className="hidden"
+        className="absolute w-1 h-1 opacity-0 pointer-events-none"
+        style={{ left: '-9999px', top: '-9999px' }}
         title="Background Music"
         allow="autoplay"
       />
@@ -3036,7 +3020,12 @@ Dan dengan tingkat keyakinan 100%,
             videoSrc={memoryVideo}
             onPlayStateChange={(playing) => {
               // Pause background music when video plays, resume background music when video pauses/stops
-              setIsPlaying(!playing);
+              const nextPlaying = !playing;
+              setIsPlaying(nextPlaying);
+              if (audioRef.current) {
+                const baseUrl = 'https://www.youtube.com/embed/WCce-3XMdJs';
+                audioRef.current.src = `${baseUrl}?autoplay=${nextPlaying ? 1 : 0}&loop=1&playlist=WCce-3XMdJs&enablejsapi=1&playsinline=1`;
+              }
             }}
             memoryVideoRef={memoryVideoRef}
           />
@@ -3052,7 +3041,7 @@ Dan dengan tingkat keyakinan 100%,
             viewport={{ once: true }}
             transition={{ duration: 0.8, type: "spring", bounce: 0.2 }}
             whileHover={{ y: -8, scale: 1.01 }}
-            className="w-full md:max-h-[85vh] flex flex-col relative bg-gradient-to-br from-white via-[#fffefd] to-[#fffbfc] rounded-[1.75rem] md:rounded-[3rem] p-4 sm:p-5 md:p-10 border border-pink-100/80 shadow-[0_15px_45px_rgba(255,112,174,0.06)] hover:shadow-[0_25px_60px_rgba(255,112,174,0.18)] hover:border-[#ff70ae]/40 transition-all duration-500 text-left select-none overflow-hidden group"
+            className="w-full md:max-h-[85vh] flex flex-col relative bg-gradient-to-br from-white via-[#fffefd] to-[#fffbfc] rounded-[1.75rem] md:rounded-[3rem] p-4 sm:p-5 md:p-10 border border-pink-100/80 shadow-[0_15px_45px_rgba(255,112,174,0.06)] hover:shadow-[0_25px_60px_rgba(255,112,174,0.18)] hover:border-[#ff70ae]/40 transition-all duration-500 text-left select-none overflow-hidden group hover-hide-cursor-text"
           >
             {/* Subtle vintage envelope style background textures */}
             <div className="absolute inset-0 bg-[radial-gradient(#ffd5e5_1px,transparent_1px)] [background-size:16px_16px] opacity-[0.14] pointer-events-none" />
@@ -3948,16 +3937,29 @@ Dan dengan tingkat keyakinan 100%,
                         A beautiful keepsake card of the letter shown on screen, formatted with decorative borders and corner hearts.
                       </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        downloadLetterAsImage();
-                        setShowDownloadChoice(false);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Download Card (PNG)
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          downloadLetterAsImage();
+                          setShowDownloadChoice(false);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Card (PNG)
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          downloadLetterAsPDF();
+                          setShowDownloadChoice(false);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-pink-50 hover:bg-pink-100/80 text-[#ff70ae] border border-pink-200/60 text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Card (PDF)
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -3982,7 +3984,7 @@ Dan dengan tingkat keyakinan 100%,
                           downloadResearchJournalAsImage();
                           setShowDownloadChoice(false);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#2d1a22] hover:bg-stone-850 text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff70ae] hover:bg-[#ff5a9e] text-white text-xs font-bold rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
                       >
                         <Download className="w-3.5 h-3.5" />
                         Download Paper Image (PNG)
@@ -3990,13 +3992,13 @@ Dan dengan tingkat keyakinan 100%,
 
                       <button
                         onClick={() => {
-                          downloadResearchJournalAsText();
+                          downloadResearchJournalAsPDF();
                           setShowDownloadChoice(false);
                         }}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#fafaf4] hover:bg-[#f3f3e8] text-[#2d1a22] border border-[#e4ebd3] text-xs font-bold rounded-xl transition-all active:scale-95 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-pink-50 hover:bg-pink-100/80 text-[#ff70ae] border border-pink-200/60 text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
                       >
-                        <Heart className="w-3.5 h-3.5 fill-[#ff70ae] text-[#ff70ae]" />
-                        Download Text File (.md)
+                        <Download className="w-3.5 h-3.5" />
+                        Download Paper (PDF)
                       </button>
                     </div>
 
