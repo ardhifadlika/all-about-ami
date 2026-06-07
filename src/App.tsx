@@ -379,6 +379,7 @@ export default function App() {
   const [currentInviteImage, setCurrentInviteImage] = useState(0);
   const [activeScheduleStep, setActiveScheduleStep] = useState(0);
   const [isSurpriseButtonHovered, setIsSurpriseButtonHovered] = useState(false);
+  const [letterLanguage, setLetterLanguage] = useState<'en' | 'id'>('en');
   const [isHoveringSignature, setIsHoveringSignature] = useState(false);
   const [fallingHearts, setFallingHearts] = useState<Array<{
     id: number;
@@ -978,49 +979,7 @@ export default function App() {
       drawHeart(70, 70, 14, '#ff70ae');
       drawHeart(70, 1080, 14, '#ff70ae');
       drawHeart(730, 1080, 14, '#ff70ae');
-
-      // 5. Love Stamp in Top Right Coordinate
-      ctx.save();
-      const stampX = 580;
-      const stampY = 70;
-      const stampW = 150;
-      const stampH = 190;
-      
-      // Stamp background
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(stampX, stampY, stampW, stampH);
-      ctx.strokeStyle = '#ff70ae';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(stampX + 4, stampY + 4, stampW - 8, stampH - 8);
-
-      // Inner dashed line for stamp
-      ctx.strokeStyle = 'rgba(255, 112, 174, 0.5)';
-      ctx.setLineDash([4, 4]);
-      ctx.strokeRect(stampX + 10, stampY + 10, stampW - 20, stampH - 20);
-      ctx.setLineDash([]);
-
-      // Heart circle inside stamp
-      ctx.beginPath();
-      ctx.arc(stampX + stampW / 2, stampY + 70, 32, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff0f4';
-      ctx.fill();
-      ctx.strokeStyle = '#ffaed1';
-      ctx.stroke();
-
-      // Draw real tiny heart inside stamp circle
-      drawHeart(stampX + stampW / 2, stampY + 60, 18, '#ff5293');
-
-      // Stamp Text
-      ctx.fillStyle = '#ff70ae';
-      ctx.font = 'bold 11px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText('LOVE STAMP', stampX + stampW / 2, stampY + 128);
-
-      ctx.fillStyle = '#8a5a68';
-      ctx.font = '9px monospace';
-      ctx.fillText('8 JUN 2026', stampX + stampW / 2, stampY + 148);
-      ctx.fillText("AMI'S DAY", stampX + stampW / 2, stampY + 164);
-      ctx.restore();
+      drawHeart(730, 70, 14, '#ff70ae');
 
       // 6. Left side headers
       ctx.fillStyle = '#ff70ae';
@@ -3129,63 +3088,191 @@ Dan dengan tingkat keyakinan 100%,
                 ))}
               </AnimatePresence>
             </div>
-            
-            {/* Interactive Love Stamp in top right corner on desktop - absolute positioned to ignore layout */}
-            <motion.div 
-              whileHover={{ scale: 1.12, rotate: 8 }}
-              onClick={triggerConfetti}
-              className="absolute top-6 right-6 hidden md:flex w-16 h-20 bg-white border-2 border-dashed border-[#ff70ae]/50 p-1 rounded-sm shadow-md flex-col items-center justify-center cursor-pointer select-none z-20"
-              title="Seal of Love - Click for magic! 💕"
-            >
-              {/* Wavy scalloped stamp border details */}
-              <div className="absolute -inset-[3px] border border-dotted border-pink-200 pointer-events-none rounded-sm" />
-              <div className="w-9 h-9 bg-pink-50 rounded-full flex items-center justify-center border border-pink-100 text-[#ff70ae]">
-                <Heart className="w-4 h-4 fill-current text-[#ff70ae] animate-pulse" />
-              </div>
-              <span className="text-[7px] font-mono font-bold text-[#ff70ae]/80 uppercase mt-2.5 tracking-wider">Love Stamp</span>
-              <span className="text-[5px] font-mono text-[#8A5A68]/60 uppercase tracking-widest mt-0.5">8 JUN 2026</span>
-            </motion.div>
 
-              <div className="space-y-3 md:space-y-6 relative z-10 pr-0 md:pr-2">
-                <div className="space-y-1.5 md:space-y-3.5">
-                  <div className="flex items-center gap-2">
-                    <Flower className="w-4 h-4 text-[#ff70ae] animate-spin-slow" />
-                    <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">A Little Note</span>
+            <div className="space-y-3 md:space-y-6 relative z-10 pr-0 md:pr-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-pink-100/50 pb-4">
+                  <div className="space-y-1 md:space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Flower className="w-4 h-4 text-[#ff70ae] animate-spin-slow" />
+                      <span className="text-[10px] md:text-xs font-bold tracking-widest text-[#ff70ae] uppercase">A Little Note</span>
+                    </div>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-serif text-[#4A2230] font-bold">
+                      Happy Birthday, sayaaaaaanggg ❤️🎂
+                    </h2>
                   </div>
-                  <h2 className="text-xl sm:text-2xl md:text-4xl font-serif text-[#4A2230] leading-snug font-bold">
-                    Happy Birthday,<br />Ami Sayang 💗
-                  </h2>
+                  
+                  {/* Modern EN / ID Toggle Selector */}
+                  <div className="flex items-center self-start sm:self-center bg-pink-50/80 p-1 rounded-full border border-pink-200/30 select-none">
+                    <button
+                      type="button"
+                      onClick={() => setLetterLanguage('en')}
+                      className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-bold tracking-wider transition-all duration-300 ${
+                        letterLanguage === 'en'
+                          ? 'bg-[#ff70ae] text-white shadow-sm'
+                          : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                      }`}
+                    >
+                      EN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLetterLanguage('id')}
+                      className={`px-3 py-1 rounded-full text-[10px] md:text-xs font-bold tracking-wider transition-all duration-300 ${
+                        letterLanguage === 'id'
+                          ? 'bg-[#ff70ae] text-white shadow-sm'
+                          : 'text-[#8A5A68] hover:text-[#ff70ae]'
+                      }`}
+                    >
+                      ID
+                    </button>
+                  </div>
                 </div>
                 
-                {/* Note Content Text - Scrollable to fit all device heights and ratios perfectly */}
-                <div className="space-y-3 text-xs md:text-sm lg:text-base text-[#4A2230] font-medium leading-relaxed md:leading-loose md:max-h-[48vh] md:overflow-y-auto pr-1 md:pr-4 custom-scrollbar">
-                  <p className="mt-1">
-                    Honestly, I don't know how to fit everything i wanna say into just a few paragraphs.
-                  </p>
-                  <p className="mt-2">
-                    Thank you for being my favorite person. Thank you for all the laughs, all the random conversations, all the little moments that make my days so much better.
-                  </p>
-                  <p className="mt-2">
-                    Being with you makes even ordinary days feel special.
-                  </p>
-                  <p className="mt-2">
-                    I hope this year brings you more happiness, more reasons to smile, and all the good things you've been wishing for. You deserve so much love, kindness, and beautiful things in life.
-                  </p>
-                  <p className="mt-2">
-                    And if there's one thing I want you to remember today, it's that you are deeply loved. More than you know.
-                  </p>
-                  <p className="mt-2">
-                    Thank you for always being my safest place, my comfort, and one of the best things that has ever happened to me.
-                  </p>
-                  <p className="mt-2">
-                    I can't wait to make more memories with you, go on more little adventures, and spend more birthdays by your side.
-                  </p>
-                  <p className="mt-2 font-semibold text-rose-600 flex items-center gap-1.5 flex-wrap">
-                    Happy 24th birthday, Ami. ❤️
-                  </p>
-                  <p className="font-semibold text-rose-600">
-                    I love you, always.
-                  </p>
+                {/* Note Content Text - Scrollable, Standard Uniform Styling (No artificial highlights) */}
+                <div className="space-y-4 text-xs md:text-sm lg:text-[14px] text-[#4A2230] leading-relaxed md:leading-loose md:max-h-[46vh] md:overflow-y-auto pr-1 md:pr-4 custom-scrollbar font-medium">
+                  {letterLanguage === 'id' ? (
+                    <>
+                      <p className="mt-1">
+                        Gak kerasa ya, sekarang kamu udah 24 tahun.
+                      </p>
+                      <p>
+                        Selamat ulang tahun yaa. Selamat karena udah berhasil lewatin satu tahun  dengan segala cerita, capek, bahagia, sedih, dan hal-hal yang mungkin gak semua orang tahu. Dan selamat juga karena sampai hari ini masih kuat ngadepin Abang yang kadang nyebelin ini. Itu pencapaian yang luar biasa loh. WKWK
+                      </p>
+                      <p>
+                        Tapi kalau serius nih, Abang cuma mau bilang makasih.
+                      </p>
+                      <p>
+                        Makasih karena kamu datang ke hidup Abang.
+                      </p>
+                      <p>
+                        Sejak kenal kamu, banyak hal jadi terasa lebih menyenangkan. Weekend yang dulu biasa aja sekarang jadi sesuatu yang selalu ditunggu. Rasanya seneng aja kalau tau bakal ketemu kamu, ngobrol, jalan bareng, gangguin kamu, atau bahkan cuma duduk bareng sambil cerita hal-hal random, apalagi sampe deeptalk.
+                      </p>
+                      <p>
+                        Makasih juga buat semua hal kecil yang kamu lakuin buat Abang. Buat masakan yang pernah kamu bikinin, buat waktu yang kamu luangin buat nyamperin Abang ke kantor, buat perhatian-perhatian kecil yang mungkin menurut kamu biasa aja tapi selalu bikin Abang merasa disayang.
+                      </p>
+                      <p>
+                        Dan yang paling penting, makasih karena selalu ada.
+                      </p>
+                      <p>
+                        Kamu udah lihat banyak versi Abang. Pas lagi seneng, pas lagi stres, pas lagi banyak pikiran, pas lagi nyebelin, pas lagi kentut, bahkan pas lagi ngadepin drama hidup. Tapi sampai sekarang kamu masih bertahan di sini. Jadi kadang Abang mikir, kamu ini manusia atau malaikat ya. Kayaknya dua-duanya deh. hehe gemesss 🤏🏻😭
+                      </p>
+                      <p>
+                        Abang juga bangga banget sama kamu tauuuuuu...
+                      </p>
+                      <p>
+                        Mungkin nggak semua orang tahu seberapa kuatnya kamu. Ada banyak hal yang udah kamu lewati, banyak hal yang mungkin kamu simpan sendiri. Tapi meskipun begitu, kamu tetap jadi orang yang ceria, baik, penuh tawa, petakilan, dan selalu bisa bikin Abang nyaman. Jujur, itu salah satu hal yang bikin Abang kagum sama kamu sampe sekarang.
+                      </p>
+                      <p>
+                        Jadi kalau suatu saat kamu lagi capek, lagi sedih, atau ngerasa semuanya terasa berat, jangan dipendam sendiri ya. Kamu punya Abang sayangggg.
+                      </p>
+                      <p>
+                        Kamu boleh cerita apa aja. Boleh ngeluh, boleh nangis, boleh marah, boleh manja, boleh kirim voice note panjang lebar  sampe beberapa menit. Abang bakal dengerin. Ya walaupun kalo pas Abang ketiduran mungkin balasnya agak telat dikit. 😌
+                      </p>
+                      <p>
+                        Sayangggggg, kita masih punya banyak hal yang belum kita jalanin bareng.
+                      </p>
+                      <p>
+                        Masih banyak tempat yang pengen kita datengin, makanan yang pengen kita cobain, trend tiktok yang pengen kita bikin, foto yang pengen kita ambil, dan mimpi yang pengen kita kejar sama-sama. Dan nikah yaa tentunya hehe
+                      </p>
+                      <p>
+                        Jadi tolong jaga diri baik-baik ya. Tetap sehat, tetap bahagia, dan tetap jadi diri kamu yang sekarang. Diri kamu yang selalu berhasil bikin Abang nyaman, bikin Abang ketawa, dan bikin Abang bersyukur karena dipertemukan sama kamu. ❤️
+                      </p>
+                      <p className="pt-2 font-semibold">
+                        Happy Birthday sekali lagi, sayang.
+                      </p>
+                      <p>
+                        Makasih karena udah jadi orang favorit Abang, notifikasi yang selalu ditunggu, dan salah satu hal terbaik yang pernah hadir di hidup Abang.
+                      </p>
+                      <p>
+                        Sekarang nikmatin hari spesial kamu yaa.
+                      </p>
+                      <p>
+                        Dan ingat satu hal penting:
+                      </p>
+                      <p>
+                        Kamu memang makin tua. Tapi tenang... Kamu masih lebih muda dari Abang kok. 😌❤️
+                      </p>
+                      <p className="pt-2 font-semibold">
+                        Abang sayang banget sama kamu. Sayaaaaanngggggg bangettttt. Lebih banyak dari yang bisa Abang ungkapin lewat tulisan ini. 💗
+                      </p>
+                      <p className="pt-2 font-semibold text-[#ff70ae]">
+                        Love you more sayang 💗<br />
+                        Love you to the moon and back 💗<br />
+                        I love you to my fullest capacity. 💗
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mt-1">
+                        It's crazy how you're already 24 years old now.
+                      </p>
+                      <p>
+                        Happy Birthday yaaa. Congratulations for making it through another year with all the stories, struggles, happiness, sadness, and things that not everyone knows about. And congratulations as well for still being strong enough to deal with Abang until today. That's honestly a huge achievement. WKWK
+                      </p>
+                      <p>
+                        But seriously, Abang just wants to say thank you.
+                      </p>
+                      <p>
+                        Thank you for coming into my life.
+                      </p>
+                      <p>
+                        Ever since I met you, so many things have become more enjoyable. Weekends that used to feel ordinary are now something I always look forward to. It just makes me happy knowing I'll get to see you, talk to you, go out with you, annoy you, or even just sit together talking about random things, especially when we end up having deep talks.
+                      </p>
+                      <p>
+                        Thank you too for all the little things you do for Abang. For the meals you've cooked for me, for taking the time to come all the way to my office, and for all those little acts of care that might seem normal to you but always make me feel loved.
+                      </p>
+                      <p>
+                        And most importantly, thank you for always being here.
+                      </p>
+                      <p>
+                        You've seen so many versions of Abang. When I'm happy, stressed, overthinking, being annoying, farting, and even dealing with all the drama life throws at me. Yet somehow, you're still here. So sometimes Abang wonders... are you a human or an angel? I think you're both. Hehe gemesss 🤏🏻😭
+                      </p>
+                      <p>
+                        And you know what? Abang is really, really proud of youuuuuu...
+                      </p>
+                      <p>
+                        Maybe not everyone knows how strong you actually are. There are so many things you've gone through, so many things you've carried quietly on your own. But despite all of that, you still remain cheerful, kind, full of laughter, chaotic, and someone who always makes Abang feel comfortable. Honestly, that's one of the many reasons why Abang still admires you so much until today.
+                      </p>
+                      <p>
+                        So if one day you're tired, sad, or feel like everything is becoming too heavy, please don't keep it all to yourself. You have Abang, sayangggg.
+                      </p>
+                      <p>
+                        You can tell me anything. You can complain, cry, get mad, be clingy, or send me voice notes that are several minutes long. Abang will listen. Well... unless Abang accidentally falls asleep first, then my reply might be a little late. 😌
+                      </p>
+                      <p>
+                        Sayangggggg, we still have so many things left to do together.
+                      </p>
+                      <p>
+                        There are still so many places we want to visit, foods we want to try, TikTok trends we want to make, photos we want to take, and dreams we want to chase together. And of course... getting married too hehe.
+                      </p>
+                      <p>
+                        So please take good care of yourself, okay? Stay healthy, stay happy, and stay exactly the way you are right now. The version of you that always makes Abang feel at home, makes Abang laugh, and makes Abang grateful that our paths crossed. ❤️
+                      </p>
+                      <p className="pt-2 font-semibold font-serif text-[#4A2230]">
+                        Happy Birthday once again, sayang.
+                      </p>
+                      <p>
+                        Thank you for being Abang's favorite person, my favorite notification, and one of the best things that has ever happened in my life.
+                      </p>
+                      <p>
+                        Now go enjoy your special day yaaa.
+                      </p>
+                      <p>
+                        And remember one important thing:
+                      </p>
+                      <p>
+                        You're getting older. But don't worry... You're still younger than Abang. 😌❤️
+                      </p>
+                      <p className="pt-2 font-semibold">
+                        Abang loves you so, so much. Sayaaaaanngggggg bangettttt. More than I could ever put into words. 💗
+                      </p>
+                      <p className="pt-2 font-semibold text-[#ff70ae]">
+                        Love you more, sayang 💗<br />
+                        Love you to the moon and back 💗<br />
+                        I love you to my fullest capacity. 💗
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {/* Sender signature block */}
@@ -3857,7 +3944,7 @@ Dan dengan tingkat keyakinan 100%,
                         The Sweet Birthday Note 💌
                       </h4>
                       <p className="text-xs text-[#8A5A68] leading-relaxed">
-                        A beautiful keepsake card of the letter shown on screen, formatted with decorative borders, corner hearts, and a custom love stamp.
+                        A beautiful keepsake card of the letter shown on screen, formatted with decorative borders and corner hearts.
                       </p>
                     </div>
                     <button
